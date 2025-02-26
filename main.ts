@@ -115,6 +115,7 @@ class RGBA implements Color {
    static red = new RGBA(1, 0, 0, 1);
    static green = new RGBA(0, 1, 0, 1);
    static blue = new RGBA(0, 0, 1, 1);
+   static purple = new RGBA(1, 0, 1, 1);
 
    constructor(
       public r: number,
@@ -176,40 +177,44 @@ const MINIMAP_SCALE = 0.03;
 const MINIMAP_PLAYER_SIZE = 0.5;
 const PLAYER_SPEED = 2;
 
-interface EmptyCell {
+interface EmptyTile {
    kind: 'empty';
 }
 
-interface ColorCell {
+interface ColorTile {
    kind: 'color';
    color: Color;
 }
 
-interface ImageCell {
+interface ImageTile {
    kind: 'image';
    image: HTMLImageElement;
 }
 
-type Cell = EmptyCell | ColorCell | ImageCell;
+type Tile = EmptyTile | ColorTile | ImageTile;
 
-const emptyCell = (): Cell => ({ kind: 'empty' });
-const colorCell = (color: Color): Cell => ({ kind: 'color', color });
-const imageCell = (image: HTMLImageElement): Cell => ({ kind: 'image', image });
+const emptyTile = (): Tile => ({ kind: 'empty' });
+const colorTile = (color: Color): Tile => ({ kind: 'color', color });
+const imageTile = (image: HTMLImageElement): Tile => ({ kind: 'image', image });
 
-function throwBadCell(cell: never): never;
-function throwBadCell(cell: Cell) {
-   throw new Error(`Unknown cell kind: ${cell.kind}`);
+function throwBadTile(tile: never): never;
+function throwBadTile(tile: Tile) {
+   throw new Error(`Unknown tile kind: ${tile.kind}`);
 }
 
 class Scene {
-   public cells: Cell[];
+   public walls: Tile[];
+   public floors: Tile[];
+   public ceilings: Tile[];
    public width: number;
    public height: number;
 
-   constructor(cells: Cell[][]) {
-      this.cells = cells.flat();
-      this.width = cells[0].length;
-      this.height = cells.length;
+   constructor(walls: Tile[][], floors: Tile[][], ceilings: Tile[][]) {
+      this.walls = walls.flat();
+      this.floors = floors.flat();
+      this.ceilings = ceilings.flat();
+      this.width = walls[0].length;
+      this.height = walls.length;
    }
 
    get size(): Vector2 {
@@ -224,18 +229,38 @@ class Scene {
       }
    }
 
-   get(x: Vector2 | number, y?: number): Cell | null {
+   getWall(x: Vector2 | number, y?: number): Tile | null {
       if (!this.contains(x, y)) return null;
       if (x instanceof Vector2) {
-         return this.cells[x.y*this.width + x.x];
+         return this.walls[Math.floor(x.y*this.width + x.x)];
       } else {
-         return this.cells[y!*this.width + x];
+         return this.walls[Math.floor(y!*this.width + x)];
+      }
+   }
+
+   getFloor(x: Vector2 | number, y?: number): Tile | null {
+      if (x instanceof Vector2) {
+         if (!this.contains(Math.floor(x.x), Math.floor(x.y))) return null;
+         return this.floors[Math.floor(x.y)*this.width + Math.floor(x.x)];
+      } else {
+         if (!this.contains(Math.floor(x), Math.floor(y!))) return null;
+         return this.floors[Math.floor(y!)*this.width + Math.floor(x)];
+      }
+   }
+
+   getCeiling(x: Vector2 | number, y?: number): Tile | null {
+      if (x instanceof Vector2) {
+         if (!this.contains(Math.floor(x.x), Math.floor(x.y))) return null;
+         return this.ceilings[Math.floor(x.y)*this.width + Math.floor(x.x)];
+      } else {
+         if (!this.contains(Math.floor(x), Math.floor(y!))) return null;
+         return this.ceilings[Math.floor(y!)*this.width + Math.floor(x)];
       }
    }
 
    isWall(x: Vector2 | number, y?: number): boolean {
-      const cell = scene.get(x, y);
-      return cell !== null && cell.kind !== 'empty';
+      const wall = scene.getWall(x, y);
+      return wall !== null && wall.kind !== 'empty';
    }
 
    rectFits(px: number, py: number, sx: number, sy: number): boolean {
@@ -346,13 +371,29 @@ const [brickWall] = await Promise.all([
 ]);
 
 const scene = new Scene([
-   [emptyCell(), emptyCell(), imageCell(brickWall), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-   [emptyCell(), emptyCell(), emptyCell(), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-   [emptyCell(), imageCell(brickWall), imageCell(brickWall), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-   [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-   [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-   [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-   [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
+   [emptyTile(), emptyTile(), imageTile(brickWall), imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile()],
+   [emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile()],
+   [emptyTile(), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile()],
+   [emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile()],
+   [emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile()],
+   [emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile()],
+   [emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile()],
+], [
+   [colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red)],
+   [colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue)],
+   [colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red)],
+   [colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue)],
+   [colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red)],
+   [colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue)],
+   [colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red), colorTile(RGBA.blue), colorTile(RGBA.red)],
+], [
+   [colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green)],
+   [colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple)],
+   [colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green)],
+   [colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple)],
+   [colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green)],
+   [colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple)],
+   [colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green), colorTile(RGBA.purple), colorTile(RGBA.green)],
 ]);
 
 const player = new Player(scene.size.clone().mul(0.63, 0.63), Math.PI*1.25);
@@ -394,20 +435,69 @@ const update = (deltaTime: number) => {
    }
 };
 
+const renderFloorAndCeiling = () => {
+   const pz = SCREEN_HEIGHT/2;
+   const [p1, p2] = player.fovRange();
+   const t = new Vector2();
+   const t1 = new Vector2();
+   const t2 = new Vector2();
+   const bp = t1.copy(p1).sub(player.pos).len();
+   for (let y = Math.floor(SCREEN_HEIGHT/2); y < SCREEN_HEIGHT; y++) {
+      const sz = SCREEN_HEIGHT - y - 1;
+
+      const ap = pz - sz;
+      const b = bp/ap*pz/NEAR_CLIPPING_PLANE;
+      t1.copy(p1).sub(player.pos).norm().mul(b).add(player.pos);
+      t2.copy(p2).sub(player.pos).norm().mul(b).add(player.pos);
+
+      for (let x = 0; x < SCREEN_WIDTH; x++) {
+         t.copy(t1).lerp(t2, x/SCREEN_WIDTH);
+
+         const floor = scene.getFloor(t);
+         if (floor !== null) {
+            switch (floor.kind) {
+               case 'empty': break;
+               case 'color':
+                  ctx.fillStyle = floor.color.toString();
+                  ctx.fillRect(x, y, 1, 1);
+                  break;
+               case 'image': break;
+               default:
+                  throwBadTile(floor);
+            }
+         }
+
+         const ceiling = scene.getCeiling(t);
+         if (ceiling !== null) {
+            switch (ceiling.kind) {
+               case 'empty': break;
+               case 'color':
+                  ctx.fillStyle = ceiling.color.toString();
+                  ctx.fillRect(x, sz, 1, 1);
+                  break;
+               case 'image': break;
+               default:
+                  throwBadTile(ceiling);
+            }
+         }
+      }
+   }
+};
+
 const renderWalls = () => {
    const [p1, p2] = player.fovRange();
    const d = Vector2.fromAngle(player.dir);
    for (let x = 0; x < SCREEN_WIDTH; x++) {
       const p = rayCast(scene, player.pos, p1.clone().lerp(p2, x/SCREEN_WIDTH));
       const c = hittingCell(player.pos, p);
-      const cell = scene.get(c);
-      if (cell !== null) {
+      const wall = scene.getWall(c);
+      if (wall !== null) {
          const v = p.clone().sub(player.pos);
          const stripeHeight = SCREEN_HEIGHT/v.dot(d);
-         switch (cell.kind) {
+         switch (wall.kind) {
             case 'empty': break;
             case 'color':
-               ctx.fillStyle = cell.color.toString(1/v.dot(d));
+               ctx.fillStyle = wall.color.toString(1/v.dot(d));
                ctx.fillRect(x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
                break;
             case 'image':
@@ -423,12 +513,12 @@ const renderWalls = () => {
                   u = t.x;
                }
 
-               ctx.drawImage(cell.image, Math.floor(u*cell.image.width), 0, 1, cell.image.height, x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
+               ctx.drawImage(wall.image, Math.floor(u*wall.image.width), 0, 1, wall.image.height, x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
                ctx.fillStyle = new RGBA(0, 0, 0, 1 - 1/v.dot(d)).toString();
                ctx.fillRect(x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
                break;
             default:
-               throwBadCell(cell);
+               throwBadTile(wall);
          }
       }
    }
@@ -478,6 +568,7 @@ const render = () => {
 
    ctx.save();
    ctx.scale(Math.ceil(canvas.width/SCREEN_WIDTH), Math.ceil(canvas.height/SCREEN_HEIGHT));
+   renderFloorAndCeiling();
    renderWalls();
    ctx.restore();
 
