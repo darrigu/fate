@@ -385,6 +385,9 @@ const scene = new Scene([
 const player = new Player(scene.size.clone().mul(0.63, 0.63), Math.PI * 1.25);
 const keys = {};
 let lastTime = performance.now();
+let fps = 0;
+let frameCount = 0;
+let fpsTime = 0;
 window.addEventListener('keydown', (event) => {
     keys[event.key] = true;
 });
@@ -594,10 +597,20 @@ const render = () => {
     backCtx.putImageData(backImageData, 0, 0);
     ctx.drawImage(backCtx.canvas, 0, 0, canvas.width, canvas.height);
     //renderMinimap();
+    ctx.fillStyle = 'white';
+    ctx.font = '32px Arial';
+    ctx.fillText(`FPS: ${fps}`, 15, 40);
 };
 const renderLoop = (currentTime) => {
     const deltaTime = (currentTime - lastTime);
     lastTime = currentTime;
+    frameCount++;
+    fpsTime += deltaTime;
+    if (fpsTime >= 500) {
+        fps = Math.round((frameCount / fpsTime) * 1000);
+        frameCount = 0;
+        fpsTime = 0;
+    }
     update(deltaTime / 1000);
     render();
     requestAnimationFrame(renderLoop);
