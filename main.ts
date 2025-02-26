@@ -370,9 +370,15 @@ const loadImageData = async (url: string): Promise<ImageData> => {
    return ctx.getImageData(0, 0, image.width, image.height);
 };
 
-const [brickWall, plankFloor, stoneCeiling] = await Promise.all([
+const [
+   brickWall,
+   plankFloor,
+   waterFloor,
+   stoneCeiling
+] = await Promise.all([
    loadImage('./assets/images/brick_wall.png'),
    loadImage('./assets/images/plank_floor.png'),
+   loadImage('./assets/images/water_floor.png'),
    loadImage('./assets/images/stone_ceiling.png'),
 ]);
 
@@ -383,6 +389,12 @@ const scene = new Scene([
    [imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall)],
    [imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall)],
    [imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall)],
+   [imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall)],
+   [imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall)],
+   [imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall)],
+   [imageTile(brickWall), emptyTile(), emptyTile(), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), emptyTile(), emptyTile(), imageTile(brickWall)],
+   [imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall)],
+   [imageTile(brickWall), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), emptyTile(), imageTile(brickWall)],
    [imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall), imageTile(brickWall)],
 ], [
    [imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor)],
@@ -392,7 +404,19 @@ const scene = new Scene([
    [imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor)],
    [imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor)],
    [imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor)],
+   [imageTile(plankFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(plankFloor)],
+   [imageTile(plankFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(plankFloor)],
+   [imageTile(plankFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(plankFloor)],
+   [imageTile(plankFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(plankFloor)],
+   [imageTile(plankFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(waterFloor), imageTile(plankFloor)],
+   [imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor), imageTile(plankFloor)],
 ], [
+   [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
+   [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
+   [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
+   [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
+   [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
+   [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
    [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
    [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
    [imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling), imageTile(stoneCeiling)],
@@ -586,7 +610,7 @@ const render = () => {
    renderWalls();
    ctx.restore();
 
-   renderMinimap();
+   //renderMinimap();
 };
 
 const renderLoop = (currentTime: number) => {
