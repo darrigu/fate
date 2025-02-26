@@ -111,11 +111,7 @@ class Vector2 {
    }
 }
 
-interface Color {
-   toString(brightness?: number): string;
-}
-
-class RGBA implements Color {
+class RGBA {
    static red = new RGBA(1, 0, 0, 1);
    static green = new RGBA(0, 1, 0, 1);
    static blue = new RGBA(0, 0, 1, 1);
@@ -133,11 +129,28 @@ class RGBA implements Color {
    }
 }
 
+const EPS = 1e-6;
+const NEAR_CLIPPING_PLANE = 0.1;
+const FAR_CLIPPING_PLANE = 10;
+const FOV = Math.PI/2;
+const SCREEN_FACTOR = 30;
+const SCREEN_WIDTH = 16*SCREEN_FACTOR;
+const SCREEN_HEIGHT = 9*SCREEN_FACTOR;
+const MINIMAP_SCALE = 0.03;
+const MINIMAP_PLAYER_SIZE = 0.5;
+const PLAYER_SPEED = 2;
+
 const canvas = document.querySelector('canvas')!;
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 const ctx = canvas.getContext('2d')!;
 ctx.imageSmoothingEnabled = false;
+
+const backImageData = new ImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+backImageData.data.fill(255);
+const backCanvas = new OffscreenCanvas(SCREEN_WIDTH, SCREEN_HEIGHT);
+const backCtx = backCanvas.getContext('2d')!;
+backCtx.imageSmoothingEnabled = false;
 
 declare global {
    interface CanvasRenderingContext2D {
@@ -170,36 +183,25 @@ CanvasRenderingContext2D.prototype.fillCircle = function(x: Vector2 | number, y?
    this.fill();
 };
 
-const EPS = 1e-6;
-const NEAR_CLIPPING_PLANE = 0.1;
-const FAR_CLIPPING_PLANE = 10;
-const FOV = Math.PI/2;
-const SCREEN_FACTOR = 10;
-const SCREEN_WIDTH = 16*SCREEN_FACTOR;
-const SCREEN_HEIGHT = 9*SCREEN_FACTOR;
-const MINIMAP_SCALE = 0.03;
-const MINIMAP_PLAYER_SIZE = 0.5;
-const PLAYER_SPEED = 2;
-
 interface EmptyTile {
    kind: 'empty';
 }
 
 interface ColorTile {
    kind: 'color';
-   color: Color;
+   color: RGBA;
 }
 
 interface ImageTile {
    kind: 'image';
-   image: HTMLImageElement;
+   image: ImageData;
 }
 
 type Tile = EmptyTile | ColorTile | ImageTile;
 
 const emptyTile = (): Tile => ({ kind: 'empty' });
-const colorTile = (color: Color): Tile => ({ kind: 'color', color });
-const imageTile = (image: HTMLImageElement): Tile => ({ kind: 'image', image });
+const colorTile = (color: RGBA): Tile => ({ kind: 'color', color });
+const imageTile = (image: ImageData): Tile => ({ kind: 'image', image });
 
 function throwBadTile(tile: never): never;
 function throwBadTile(tile: Tile) {
@@ -376,10 +378,10 @@ const [
    waterFloor,
    stoneCeiling
 ] = await Promise.all([
-   loadImage('./assets/images/brick_wall.png'),
-   loadImage('./assets/images/plank_floor.png'),
-   loadImage('./assets/images/water_floor.png'),
-   loadImage('./assets/images/stone_ceiling.png'),
+   loadImageData('./assets/images/brick_wall.png'),
+   loadImageData('./assets/images/plank_floor.png'),
+   loadImageData('./assets/images/water_floor.png'),
+   loadImageData('./assets/images/stone_ceiling.png'),
 ]);
 
 const scene = new Scene([
@@ -487,15 +489,23 @@ const renderFloorAndCeiling = () => {
          if (floor !== null) {
             switch (floor.kind) {
                case 'empty': break;
-               case 'color':
-                  ctx.fillStyle = floor.color.toString(1/player.pos.distTo(t));
-                  ctx.fillRect(x, y, 1, 1);
-                  break;
-               case 'image': 
-                  ctx.drawImage(floor.image, Math.floor((t.x - Math.floor(t.x))*floor.image.width), Math.floor((t.y - Math.floor(t.y))*floor.image.height), 1, 1, x, y, 1, 1);
-                  ctx.fillStyle = new RGBA(0, 0, 0, 1 - 1/player.pos.distTo(t)).toString();
-                  ctx.fillRect(x, y, 1, 1);
-                  break;
+               case 'color': {
+                  const shadow = player.pos.distTo(t)*255;
+                  const destP = (y*backImageData.width + x)*4;
+                  backImageData.data[destP + 0] = floor.color.r*shadow;
+                  backImageData.data[destP + 1] = floor.color.g*shadow;
+                  backImageData.data[destP + 2] = floor.color.b*shadow;
+               } break;
+               case 'image': {
+                  const shadow = Math.min(1/player.pos.distTo(t)*2, 1);
+                  const sx = Math.floor((t.x - Math.floor(t.x))*floor.image.width);
+                  const sy = Math.floor((t.y - Math.floor(t.y))*floor.image.height);
+                  const destP = (y*backImageData.width + x)*4;
+                  const srcP = (sy*floor.image.width + sx)*4;
+                  backImageData.data[destP + 0] = floor.image.data[srcP + 0]*shadow;
+                  backImageData.data[destP + 1] = floor.image.data[srcP + 1]*shadow;
+                  backImageData.data[destP + 2] = floor.image.data[srcP + 2]*shadow;
+               } break;
                default:
                   throwBadTile(floor);
             }
@@ -505,15 +515,23 @@ const renderFloorAndCeiling = () => {
          if (ceiling !== null) {
             switch (ceiling.kind) {
                case 'empty': break;
-               case 'color':
-                  ctx.fillStyle = ceiling.color.toString(1/player.pos.distTo(t));
-                  ctx.fillRect(x, sz, 1, 1);
-                  break;
-               case 'image':
-                  ctx.drawImage(ceiling.image, Math.floor((t.x - Math.floor(t.x))*ceiling.image.width), Math.floor((t.y - Math.floor(t.y))*ceiling.image.height), 1, 1, x, sz, 1, 1);
-                  ctx.fillStyle = new RGBA(0, 0, 0, 1 - 1/player.pos.distTo(t)).toString();
-                  ctx.fillRect(x, sz, 1, 1);
-                  break;
+               case 'color': {
+                  const shadow = player.pos.distTo(t)*255;
+                  const destP = (sz*backImageData.width + x)*4;
+                  backImageData.data[destP + 0] = ceiling.color.r*shadow;
+                  backImageData.data[destP + 1] = ceiling.color.g*shadow;
+                  backImageData.data[destP + 2] = ceiling.color.b*shadow;
+               } break;
+               case 'image': {
+                  const shadow = Math.min(1/player.pos.distTo(t)*2, 1);
+                  const sx = Math.floor((t.x - Math.floor(t.x))*ceiling.image.width);
+                  const sy = Math.floor((t.y - Math.floor(t.y))*ceiling.image.height);
+                  const destP = (sz*backImageData.width + x)*4;
+                  const srcP = (sy*ceiling.image.width + sx)*4;
+                  backImageData.data[destP + 0] = ceiling.image.data[srcP + 0]*shadow;
+                  backImageData.data[destP + 1] = ceiling.image.data[srcP + 1]*shadow;
+                  backImageData.data[destP + 2] = ceiling.image.data[srcP + 2]*shadow;
+               } break;
                default:
                   throwBadTile(ceiling);
             }
@@ -534,11 +552,17 @@ const renderWalls = () => {
          const stripeHeight = SCREEN_HEIGHT/v.dot(d);
          switch (wall.kind) {
             case 'empty': break;
-            case 'color':
-               ctx.fillStyle = wall.color.toString(1/v.dot(d));
-               ctx.fillRect(x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
-               break;
-            case 'image':
+            case 'color': {
+               const shadow = 1/v.dot(d)*2;
+               for (let dy = 0; dy < Math.ceil(stripeHeight); ++dy) {
+                  const y = Math.floor((backImageData.height - stripeHeight)*0.5) + dy;
+                  const destP = (y*backImageData.width + x)*4;
+                  backImageData.data[destP + 0] = wall.color.r*shadow*255;
+                  backImageData.data[destP + 1] = wall.color.g*shadow*255;
+                  backImageData.data[destP + 2] = wall.color.b*shadow*255;
+               }
+            } break;
+            case 'image': {
                const t = p.clone().sub(c);
                let u = 0;
                if (Math.abs(t.x) < EPS && t.y > 0) {
@@ -551,10 +575,22 @@ const renderWalls = () => {
                   u = t.x;
                }
 
-               ctx.drawImage(wall.image, Math.floor(u*wall.image.width), 0, 1, wall.image.height, x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
-               ctx.fillStyle = new RGBA(0, 0, 0, 1 - 1/v.dot(d)).toString();
-               ctx.fillRect(x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
-               break;
+               const y1 = Math.floor((backImageData.height - stripeHeight)/2);
+               const y2 = Math.floor(y1 + stripeHeight);
+               const by1 = Math.max(0, y1);
+               const by2 = Math.min(backImageData.height - 1, y2);
+               const tx = Math.floor(u*wall.image.width);
+               const sh = (1/Math.ceil(stripeHeight))*wall.image.height;
+               const shadow = Math.min(1/v.dot(d)*2, 1);
+               for (let y = by1; y <= by2; ++y) {
+                  const ty = Math.floor((y - y1)*sh);
+                  const destP = (y*backImageData.width + x)*4;
+                  const srcP = (ty*wall.image.width + tx)*4;
+                  backImageData.data[destP + 0] = wall.image.data[srcP + 0]*shadow;
+                  backImageData.data[destP + 1] = wall.image.data[srcP + 1]*shadow;
+                  backImageData.data[destP + 2] = wall.image.data[srcP + 2]*shadow;
+               }
+            } break;
             default:
                throwBadTile(wall);
          }
@@ -604,11 +640,10 @@ const render = () => {
    ctx.fillStyle = '#fbf1c7';
    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-   ctx.save();
-   ctx.scale(Math.ceil(canvas.width/SCREEN_WIDTH), Math.ceil(canvas.height/SCREEN_HEIGHT));
    renderFloorAndCeiling();
    renderWalls();
-   ctx.restore();
+   backCtx.putImageData(backImageData, 0, 0);
+   ctx.drawImage(backCtx.canvas, 0, 0, canvas.width, canvas.height);
 
    //renderMinimap();
 };
