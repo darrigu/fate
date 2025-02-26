@@ -126,6 +126,7 @@ const canvas = document.querySelector('canvas');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
 CanvasRenderingContext2D.prototype.strokeLine = function (x1, y1, x2, y2) {
     this.beginPath();
     if (x1 instanceof Vector2) {
@@ -152,7 +153,8 @@ const EPS = 1e-6;
 const NEAR_CLIPPING_PLANE = 0.1;
 const FAR_CLIPPING_PLANE = 10;
 const FOV = Math.PI / 2;
-const SCREEN_WIDTH = 400;
+const SCREEN_SCALE = 30;
+const SCREEN_WIDTH = 16 * SCREEN_SCALE;
 const MINIMAP_SCALE = 0.03;
 const MINIMAP_PLAYER_SIZE = 0.5;
 const PLAYER_SPEED = 2;
