@@ -134,11 +134,13 @@ canvas.height = window.innerHeight;
 const ctx = canvas.getContext('2d')!;
 ctx.imageSmoothingEnabled = false;
 
-interface CanvasRenderingContext2D {
-   strokeLine(p1: Vector2, p2: Vector2): void;
-   strokeLine(x1: number, y1: number, x2: number, y2: number): void;
-   fillCircle(p: Vector2, radius: number): void;
-   fillCircle(x: number, y: number, radius: number): void;
+declare global {
+   interface CanvasRenderingContext2D {
+      strokeLine(p1: Vector2, p2: Vector2): void;
+      strokeLine(x1: number, y1: number, x2: number, y2: number): void;
+      fillCircle(p: Vector2, radius: number): void;
+      fillCircle(x: number, y: number, radius: number): void;
+   }
 }
 
 CanvasRenderingContext2D.prototype.strokeLine = function(x1: Vector2 | number, y1: Vector2 | number, x2?: number, y2?: number) {
@@ -182,10 +184,16 @@ interface ColorCell {
    color: Color;
 }
 
-type Cell = EmptyCell | ColorCell;
+interface ImageCell {
+   kind: 'image';
+   image: HTMLImageElement;
+}
+
+type Cell = EmptyCell | ColorCell | ImageCell;
 
 const emptyCell = (): Cell => ({ kind: 'empty' });
 const colorCell = (color: Color): Cell => ({ kind: 'color', color });
+const imageCell = (image: HTMLImageElement): Cell => ({ kind: 'image', image });
 
 function throwBadCell(cell: never): never;
 function throwBadCell(cell: Cell) {
@@ -315,10 +323,31 @@ const rayCast = (scene: Scene, p1: Vector2, p2: Vector2): Vector2 => {
    return p2;
 };
 
+const loadImage = async (url: string): Promise<HTMLImageElement> => {
+   const image = new Image();
+   image.src = url;
+   return new Promise((resolve, reject) => {
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+   });
+};
+
+const loadImageData = async (url: string): Promise<ImageData> => {
+   const image = await loadImage(url);
+   const canvas = new OffscreenCanvas(image.width, image.height);
+   const ctx = canvas.getContext('2d')!;
+   ctx.drawImage(image, 0, 0);
+   return ctx.getImageData(0, 0, image.width, image.height);
+};
+
+const [brickWall] = await Promise.all([
+   loadImage('./assets/images/brick_wall.png'),
+]);
+
 const scene = new Scene([
-   [emptyCell(), emptyCell(), colorCell(RGBA.red), colorCell(RGBA.red), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-   [emptyCell(), emptyCell(), emptyCell(), colorCell(RGBA.red), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-   [emptyCell(), colorCell(RGBA.red), colorCell(RGBA.red), colorCell(RGBA.red), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
+   [emptyCell(), emptyCell(), imageCell(brickWall), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
+   [emptyCell(), emptyCell(), emptyCell(), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
+   [emptyCell(), imageCell(brickWall), imageCell(brickWall), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
    [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
    [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
    [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
@@ -365,12 +394,13 @@ const update = (deltaTime: number) => {
 };
 
 const renderWalls = () => {
-   const stripeWidth = Math.ceil(canvas.width/SCREEN_WIDTH);
+   const stripeWidth = canvas.width/SCREEN_WIDTH;
    const [p1, p2] = player.fovRange();
    const d = Vector2.fromAngle(player.dir);
    for (let x = 0; x < SCREEN_WIDTH; x++) {
       const p = rayCast(scene, player.pos, p1.clone().lerp(p2, x/SCREEN_WIDTH));
-      const cell = scene.get(hittingCell(player.pos, p));
+      const c = hittingCell(player.pos, p);
+      const cell = scene.get(c);
       if (cell !== null) {
          const v = p.clone().sub(player.pos);
          const stripeHeight = canvas.height/v.dot(d);
@@ -378,7 +408,24 @@ const renderWalls = () => {
             case 'empty': break;
             case 'color':
                ctx.fillStyle = cell.color.toString(1/v.dot(d));
-               ctx.fillRect(x*stripeWidth, (canvas.height - stripeHeight)/2, stripeWidth, stripeHeight);
+               ctx.fillRect(Math.floor(x*stripeWidth), Math.floor((canvas.height - stripeHeight)/2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
+               break;
+            case 'image':
+               let u = 0;
+               const t = p.clone().sub(c);
+               if (Math.abs(t.x) < EPS && t.y > 0) {
+                  u = t.y;
+               } else if (Math.abs(t.x - 1) < EPS && t.y > 0) {
+                  u = 1 - t.y;
+               } else if (Math.abs(t.y) < EPS && t.x > 0) {
+                  u = 1 - t.x;
+               } else {
+                  u = t.x;
+               }
+
+               ctx.drawImage(cell.image, Math.floor(u*cell.image.width), 0, 1, cell.image.height, Math.floor(x*stripeWidth), Math.floor((canvas.height - stripeHeight)/2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
+               ctx.fillStyle = new RGBA(0, 0, 0, 1 - 1/v.dot(d)).toString();
+               ctx.fillRect(Math.floor(x*stripeWidth), Math.floor((canvas.height - stripeHeight)/2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
                break;
             default:
                throwBadCell(cell);
@@ -397,15 +444,9 @@ const renderMinimap = () => {
 
    for (let y = 0; y < scene.height; y++) {
       for (let x = 0; x < scene.width; x++) {
-         const cell = scene.get(x, y)!;
-         switch (cell.kind) {
-            case 'empty': break;
-            case 'color':
-               ctx.fillStyle = cell.color.toString();
-               ctx.fillRect(x, y, 1, 1);
-               break;
-            default:
-               throwBadCell(cell);
+         if (scene.isWall(x, y)) {
+            ctx.fillStyle = '#3c3836';
+            ctx.fillRect(x, y, 1, 1);
          }
       }
    }
@@ -450,3 +491,5 @@ const renderLoop = (currentTime: number) => {
 };
 
 requestAnimationFrame(renderLoop);
+
+export {};

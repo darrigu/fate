@@ -1,4 +1,3 @@
-"use strict";
 class Vector2 {
     x;
     y;
@@ -160,6 +159,7 @@ const MINIMAP_PLAYER_SIZE = 0.5;
 const PLAYER_SPEED = 2;
 const emptyCell = () => ({ kind: 'empty' });
 const colorCell = (color) => ({ kind: 'color', color });
+const imageCell = (image) => ({ kind: 'image', image });
 function throwBadCell(cell) {
     throw new Error(`Unknown cell kind: ${cell.kind}`);
 }
@@ -280,10 +280,28 @@ const rayCast = (scene, p1, p2) => {
     }
     return p2;
 };
+const loadImage = async (url) => {
+    const image = new Image();
+    image.src = url;
+    return new Promise((resolve, reject) => {
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+    });
+};
+const loadImageData = async (url) => {
+    const image = await loadImage(url);
+    const canvas = new OffscreenCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+    return ctx.getImageData(0, 0, image.width, image.height);
+};
+const [brickWall] = await Promise.all([
+    loadImage('./assets/images/brick_wall.png'),
+]);
 const scene = new Scene([
-    [emptyCell(), emptyCell(), colorCell(RGBA.red), colorCell(RGBA.red), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-    [emptyCell(), emptyCell(), emptyCell(), colorCell(RGBA.red), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
-    [emptyCell(), colorCell(RGBA.red), colorCell(RGBA.red), colorCell(RGBA.red), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
+    [emptyCell(), emptyCell(), imageCell(brickWall), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
+    [emptyCell(), emptyCell(), emptyCell(), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
+    [emptyCell(), imageCell(brickWall), imageCell(brickWall), imageCell(brickWall), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
     [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
     [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
     [emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell(), emptyCell()],
@@ -324,12 +342,13 @@ const update = (deltaTime) => {
     }
 };
 const renderWalls = () => {
-    const stripeWidth = Math.ceil(canvas.width / SCREEN_WIDTH);
+    const stripeWidth = canvas.width / SCREEN_WIDTH;
     const [p1, p2] = player.fovRange();
     const d = Vector2.fromAngle(player.dir);
     for (let x = 0; x < SCREEN_WIDTH; x++) {
         const p = rayCast(scene, player.pos, p1.clone().lerp(p2, x / SCREEN_WIDTH));
-        const cell = scene.get(hittingCell(player.pos, p));
+        const c = hittingCell(player.pos, p);
+        const cell = scene.get(c);
         if (cell !== null) {
             const v = p.clone().sub(player.pos);
             const stripeHeight = canvas.height / v.dot(d);
@@ -337,7 +356,26 @@ const renderWalls = () => {
                 case 'empty': break;
                 case 'color':
                     ctx.fillStyle = cell.color.toString(1 / v.dot(d));
-                    ctx.fillRect(x * stripeWidth, (canvas.height - stripeHeight) / 2, stripeWidth, stripeHeight);
+                    ctx.fillRect(Math.floor(x * stripeWidth), Math.floor((canvas.height - stripeHeight) / 2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
+                    break;
+                case 'image':
+                    let u = 0;
+                    const t = p.clone().sub(c);
+                    if (Math.abs(t.x) < EPS && t.y > 0) {
+                        u = t.y;
+                    }
+                    else if (Math.abs(t.x - 1) < EPS && t.y > 0) {
+                        u = 1 - t.y;
+                    }
+                    else if (Math.abs(t.y) < EPS && t.x > 0) {
+                        u = 1 - t.x;
+                    }
+                    else {
+                        u = t.x;
+                    }
+                    ctx.drawImage(cell.image, Math.floor(u * cell.image.width), 0, 1, cell.image.height, Math.floor(x * stripeWidth), Math.floor((canvas.height - stripeHeight) / 2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
+                    ctx.fillStyle = new RGBA(0, 0, 0, 1 - 1 / v.dot(d)).toString();
+                    ctx.fillRect(Math.floor(x * stripeWidth), Math.floor((canvas.height - stripeHeight) / 2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
                     break;
                 default:
                     throwBadCell(cell);
@@ -353,15 +391,9 @@ const renderMinimap = () => {
     ctx.fillRect(0, 0, scene.width, scene.height);
     for (let y = 0; y < scene.height; y++) {
         for (let x = 0; x < scene.width; x++) {
-            const cell = scene.get(x, y);
-            switch (cell.kind) {
-                case 'empty': break;
-                case 'color':
-                    ctx.fillStyle = cell.color.toString();
-                    ctx.fillRect(x, y, 1, 1);
-                    break;
-                default:
-                    throwBadCell(cell);
+            if (scene.isWall(x, y)) {
+                ctx.fillStyle = '#3c3836';
+                ctx.fillRect(x, y, 1, 1);
             }
         }
     }
@@ -396,4 +428,5 @@ const renderLoop = (currentTime) => {
     requestAnimationFrame(renderLoop);
 };
 requestAnimationFrame(renderLoop);
+export {};
 //# sourceMappingURL=main.js.map
