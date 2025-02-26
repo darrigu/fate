@@ -220,6 +220,11 @@ class Scene {
          return this.cells[y!*this.width + x];
       }
    }
+
+   isWall(x: Vector2 | number, y?: number): boolean {
+      const cell = scene.get(x, y);
+      return cell !== null && cell.kind !== 'empty';
+   }
 }
 
 class Player {
@@ -281,10 +286,10 @@ const rayStep = (p1: Vector2, p2: Vector2): Vector2 => {
 };
 
 const rayCast = (scene: Scene, p1: Vector2, p2: Vector2): Vector2 => {
-   while (true) {
-      const cell = scene.get(hittingCell(p1, p2));
-      if (cell === null || cell.kind !== 'empty') break;
-
+   let start = p1;
+   while (start.sqrDistTo(p1) < FAR_CLIPPING_PLANE*FAR_CLIPPING_PLANE) {
+      const c = hittingCell(p1, p2);
+      if (scene.isWall(c)) break;
       const p3 = rayStep(p1, p2);
       p1 = p2;
       p2 = p3;
