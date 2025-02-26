@@ -676,4 +676,15 @@ const renderLoop = (currentTime: number) => {
 
 requestAnimationFrame(renderLoop);
 
+const isDev = window.location.hostname === 'localhost';
+if (isDev) {
+   const ws = new WebSocket('ws://localhost:5000');
+
+   ws.addEventListener('message', event => {
+      if (event.data === 'reload') {
+         window.location.reload();
+      }
+   });
+}
+
 export {};

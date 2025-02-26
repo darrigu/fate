@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+const { spawn } = require('child_process');
 
 const cmd = (program, ...args) => {
    console.log('CMD:', program, ...args);
@@ -14,3 +14,4 @@ const cmd = (program, ...args) => {
 
 cmd('tsc', '-w');
 cmd('http-server', '-p', '8080', '-a', '127.0.0.1', '-s', '-c-1');
+cmd('node', './devServer.js');
