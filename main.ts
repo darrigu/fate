@@ -169,8 +169,9 @@ const EPS = 1e-6;
 const NEAR_CLIPPING_PLANE = 0.1;
 const FAR_CLIPPING_PLANE = 10;
 const FOV = Math.PI/2;
-const SCREEN_SCALE = 30;
-const SCREEN_WIDTH = 16*SCREEN_SCALE;
+const SCREEN_FACTOR = 20;
+const SCREEN_WIDTH = 16*SCREEN_FACTOR;
+const SCREEN_HEIGHT = 9*SCREEN_FACTOR;
 const MINIMAP_SCALE = 0.03;
 const MINIMAP_PLAYER_SIZE = 0.5;
 const PLAYER_SPEED = 2;
@@ -394,7 +395,6 @@ const update = (deltaTime: number) => {
 };
 
 const renderWalls = () => {
-   const stripeWidth = canvas.width/SCREEN_WIDTH;
    const [p1, p2] = player.fovRange();
    const d = Vector2.fromAngle(player.dir);
    for (let x = 0; x < SCREEN_WIDTH; x++) {
@@ -403,16 +403,16 @@ const renderWalls = () => {
       const cell = scene.get(c);
       if (cell !== null) {
          const v = p.clone().sub(player.pos);
-         const stripeHeight = canvas.height/v.dot(d);
+         const stripeHeight = SCREEN_HEIGHT/v.dot(d);
          switch (cell.kind) {
             case 'empty': break;
             case 'color':
                ctx.fillStyle = cell.color.toString(1/v.dot(d));
-               ctx.fillRect(Math.floor(x*stripeWidth), Math.floor((canvas.height - stripeHeight)/2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
+               ctx.fillRect(x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
                break;
             case 'image':
-               let u = 0;
                const t = p.clone().sub(c);
+               let u = 0;
                if (Math.abs(t.x) < EPS && t.y > 0) {
                   u = t.y;
                } else if (Math.abs(t.x - 1) < EPS && t.y > 0) {
@@ -423,9 +423,9 @@ const renderWalls = () => {
                   u = t.x;
                }
 
-               ctx.drawImage(cell.image, Math.floor(u*cell.image.width), 0, 1, cell.image.height, Math.floor(x*stripeWidth), Math.floor((canvas.height - stripeHeight)/2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
+               ctx.drawImage(cell.image, Math.floor(u*cell.image.width), 0, 1, cell.image.height, x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
                ctx.fillStyle = new RGBA(0, 0, 0, 1 - 1/v.dot(d)).toString();
-               ctx.fillRect(Math.floor(x*stripeWidth), Math.floor((canvas.height - stripeHeight)/2), Math.ceil(stripeWidth), Math.ceil(stripeHeight));
+               ctx.fillRect(x, Math.floor((SCREEN_HEIGHT - stripeHeight)/2), 1, Math.ceil(stripeHeight));
                break;
             default:
                throwBadCell(cell);
@@ -476,7 +476,11 @@ const render = () => {
    ctx.fillStyle = '#fbf1c7';
    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+   ctx.save();
+   ctx.scale(Math.ceil(canvas.width/SCREEN_WIDTH), Math.ceil(canvas.height/SCREEN_HEIGHT));
    renderWalls();
+   ctx.restore();
+
    renderMinimap();
 };
 
