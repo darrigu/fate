@@ -149,11 +149,12 @@ CanvasRenderingContext2D.prototype.fillCircle = function (x, y, radius) {
     this.fill();
 };
 const EPS = 1e-6;
-const NEAR_CLIPPING_PLANE = 1;
+const NEAR_CLIPPING_PLANE = 0.1;
 const FAR_CLIPPING_PLANE = 10;
 const FOV = Math.PI / 2;
 const SCREEN_WIDTH = 400;
 const MINIMAP_SCALE = 0.03;
+const MINIMAP_PLAYER_SIZE = 0.5;
 const PLAYER_SPEED = 2;
 const emptyCell = () => ({ kind: 'empty' });
 const colorCell = (color) => ({ kind: 'color', color });
@@ -193,6 +194,20 @@ class Scene {
     isWall(x, y) {
         const cell = scene.get(x, y);
         return cell !== null && cell.kind !== 'empty';
+    }
+    rectFits(px, py, sx, sy) {
+        const x1 = Math.floor(px - sx / 2);
+        const x2 = Math.floor(px + sx / 2);
+        const y1 = Math.floor(py - sy / 2);
+        const y2 = Math.floor(py + sy / 2);
+        for (let x = x1; x <= x2; x++) {
+            for (let y = y1; y <= y2; y++) {
+                if (this.isWall(x, y)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
 class Player {
@@ -297,7 +312,14 @@ const update = (deltaTime) => {
         angularVelocity += Math.PI / 2;
     }
     player.dir += angularVelocity * deltaTime;
-    player.pos.add(player.velocity.mul(deltaTime));
+    const nx = player.pos.x + player.velocity.x * deltaTime;
+    if (scene.rectFits(nx, player.pos.y, MINIMAP_PLAYER_SIZE, MINIMAP_PLAYER_SIZE)) {
+        player.pos.x = nx;
+    }
+    const ny = player.pos.y + player.velocity.y * deltaTime;
+    if (scene.rectFits(player.pos.x, ny, MINIMAP_PLAYER_SIZE, MINIMAP_PLAYER_SIZE)) {
+        player.pos.y = ny;
+    }
 };
 const renderWalls = () => {
     const stripeWidth = Math.ceil(canvas.width / SCREEN_WIDTH);
@@ -349,11 +371,10 @@ const renderMinimap = () => {
     for (let x = 0; x <= scene.width; x++) {
         ctx.strokeLine(x, 0, x, scene.height);
     }
-    ctx.fillStyle = '#8f3f71';
-    ctx.fillCircle(player.pos, 0.2);
-    const [p1, p2] = player.fovRange();
     ctx.lineWidth = 0.05;
     ctx.strokeStyle = '#8f3f71';
+    ctx.strokeRect(player.pos.x - MINIMAP_PLAYER_SIZE / 2, player.pos.y - MINIMAP_PLAYER_SIZE / 2, MINIMAP_PLAYER_SIZE, MINIMAP_PLAYER_SIZE);
+    const [p1, p2] = player.fovRange();
     ctx.strokeLine(player.pos, p1);
     ctx.strokeLine(player.pos, p2);
     ctx.strokeLine(p1, p2);

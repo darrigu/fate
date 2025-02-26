@@ -163,11 +163,12 @@ CanvasRenderingContext2D.prototype.fillCircle = function(x: Vector2 | number, y?
 };
 
 const EPS = 1e-6;
-const NEAR_CLIPPING_PLANE = 1;
+const NEAR_CLIPPING_PLANE = 0.1;
 const FAR_CLIPPING_PLANE = 10;
 const FOV = Math.PI/2;
 const SCREEN_WIDTH = 400;
 const MINIMAP_SCALE = 0.03;
+const MINIMAP_PLAYER_SIZE = 0.5;
 const PLAYER_SPEED = 2;
 
 interface EmptyCell {
@@ -224,6 +225,21 @@ class Scene {
    isWall(x: Vector2 | number, y?: number): boolean {
       const cell = scene.get(x, y);
       return cell !== null && cell.kind !== 'empty';
+   }
+
+   rectFits(px: number, py: number, sx: number, sy: number): boolean {
+      const x1 = Math.floor(px - sx/2);
+      const x2 = Math.floor(px + sx/2);
+      const y1 = Math.floor(py - sy/2);
+      const y2 = Math.floor(py + sy/2);
+      for (let x = x1; x <= x2; x++) {
+         for (let y = y1; y <= y2; y++) {
+            if (this.isWall(x, y)) {
+               return false;
+            }
+         }
+      }
+      return true;
    }
 }
 
@@ -336,7 +352,14 @@ const update = (deltaTime: number) => {
       angularVelocity += Math.PI/2;
    }
    player.dir += angularVelocity*deltaTime;
-   player.pos.add(player.velocity.mul(deltaTime));
+   const nx = player.pos.x + player.velocity.x*deltaTime;
+   if (scene.rectFits(nx, player.pos.y, MINIMAP_PLAYER_SIZE, MINIMAP_PLAYER_SIZE)) {
+      player.pos.x = nx;
+   }
+   const ny = player.pos.y + player.velocity.y*deltaTime;
+   if (scene.rectFits(player.pos.x, ny, MINIMAP_PLAYER_SIZE, MINIMAP_PLAYER_SIZE)) {
+      player.pos.y = ny;
+   }
 };
 
 const renderWalls = () => {
@@ -394,12 +417,11 @@ const renderMinimap = () => {
       ctx.strokeLine(x, 0, x, scene.height);
    }
 
-   ctx.fillStyle = '#8f3f71';
-   ctx.fillCircle(player.pos, 0.2);
-
-   const [p1, p2] = player.fovRange();
    ctx.lineWidth = 0.05;
    ctx.strokeStyle = '#8f3f71';
+   ctx.strokeRect(player.pos.x - MINIMAP_PLAYER_SIZE/2, player.pos.y - MINIMAP_PLAYER_SIZE/2, MINIMAP_PLAYER_SIZE, MINIMAP_PLAYER_SIZE);
+
+   const [p1, p2] = player.fovRange();
    ctx.strokeLine(player.pos, p1);
    ctx.strokeLine(player.pos, p2);
    ctx.strokeLine(p1, p2);
