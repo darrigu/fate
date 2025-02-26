@@ -1,15 +1,16 @@
 {
-  "name": "fate",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "typescript": "^5.7.3"
-  }
+   "name": "fate",
+   "version": "1.0.0",
+   "description": "",
+   "main": "main.ts",
+   "scripts": {
+      "watch": "node watch.js"
+   },
+   "keywords": [],
+   "author": "",
+   "license": "ISC",
+   "devDependencies": {
+      "http-server": "^14.1.1",
+      "typescript": "^5.7.3"
+   }
 }
