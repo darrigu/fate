@@ -17,35 +17,27 @@ const backCanvas = new OffscreenCanvas(SCREEN_WIDTH, SCREEN_HEIGHT);
 const backCtx = backCanvas.getContext('2d');
 backCtx.imageSmoothingEnabled = false;
 const display = Display.create(ctx, backCtx, backImageData);
-const loadImage = async (url) => {
-    const image = new Image();
-    image.src = url;
+const loadTexture = (path) => {
     return new Promise((resolve, reject) => {
-        image.onload = () => resolve(image);
-        image.onerror = reject;
+        const image = new Image();
+        image.src = path;
+        image.onload = () => {
+            const canvas = new OffscreenCanvas(image.width, image.height);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(image, 0, 0);
+            const imageData = ctx.getImageData(0, 0, image.width, image.height);
+            resolve(imageData);
+        };
+        image.onerror = (err) => reject(err);
     });
 };
-const loadImageData = async (url) => {
-    const image = await loadImage(url);
-    const canvas = new OffscreenCanvas(image.width, image.height);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(image, 0, 0);
-    return ctx.getImageData(0, 0, image.width, image.height);
-};
-const [brickWall, plankFloor, waterFloor, stoneCeiling, keySprite,] = await Promise.all([
-    loadImageData('./assets/images/brick_wall.png'),
-    loadImageData('./assets/images/plank_floor.png'),
-    loadImageData('./assets/images/water_floor.png'),
-    loadImageData('./assets/images/stone_ceiling.png'),
-    loadImageData('./assets/images/key_sprite.png'),
-]);
 let scene;
 {
     const _ = Tile.empty;
-    const B = Tile.image(brickWall);
-    const P = Tile.image(plankFloor);
-    const W = Tile.image(waterFloor);
-    const S = Tile.image(stoneCeiling);
+    const B = Tile.texture(await loadTexture('./assets/images/brick_wall.png'));
+    const P = Tile.texture(await loadTexture('./assets/images/plank_floor.png'));
+    const W = Tile.texture(await loadTexture('./assets/images/water_floor.png'));
+    const S = Tile.texture(await loadTexture('./assets/images/stone_ceiling.png'));
     scene = Scene.create([
         [B, B, B, B, B, B, B, B, B],
         [B, _, _, _, _, _, _, _, B],
@@ -91,7 +83,7 @@ let scene;
     ], [
         {
             pos: Vec2.create(4.5, 3.5),
-            image: keySprite,
+            texture: await loadTexture('./assets/images/key_sprite.png'),
         },
     ]);
 }

@@ -164,7 +164,7 @@ export var Tile;
 (function (Tile) {
     Tile.empty = { kind: 'empty' };
     Tile.color = (color) => ({ kind: 'color', color });
-    Tile.image = (image) => ({ kind: 'image', image });
+    Tile.texture = (texture) => ({ kind: 'texture', texture });
     function throwBad(tile) {
         throw new Error(`Unknown tile kind: ${tile.kind}`);
     }
@@ -364,16 +364,16 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }) =>
                             backImageData.data[destP + 2] = floor.color.b * shadow;
                         }
                         break;
-                    case 'image':
+                    case 'texture':
                         {
                             const shadow = Math.min(1 / Vec2.dist(player.pos, t) * 2, 1);
-                            const sx = Math.floor((t.x - Math.floor(t.x)) * floor.image.width);
-                            const sy = Math.floor((t.y - Math.floor(t.y)) * floor.image.height);
+                            const sx = Math.floor((t.x - Math.floor(t.x)) * floor.texture.width);
+                            const sy = Math.floor((t.y - Math.floor(t.y)) * floor.texture.height);
                             const destP = (y * backImageData.width + x) * 4;
-                            const srcP = (sy * floor.image.width + sx) * 4;
-                            backImageData.data[destP + 0] = floor.image.data[srcP + 0] * shadow;
-                            backImageData.data[destP + 1] = floor.image.data[srcP + 1] * shadow;
-                            backImageData.data[destP + 2] = floor.image.data[srcP + 2] * shadow;
+                            const srcP = (sy * floor.texture.width + sx) * 4;
+                            backImageData.data[destP + 0] = floor.texture.data[srcP + 0] * shadow;
+                            backImageData.data[destP + 1] = floor.texture.data[srcP + 1] * shadow;
+                            backImageData.data[destP + 2] = floor.texture.data[srcP + 2] * shadow;
                         }
                         break;
                     default: Tile.throwBad(floor);
@@ -396,16 +396,16 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }) =>
                             backImageData.data[destP + 2] = ceiling.color.b * shadow;
                         }
                         break;
-                    case 'image':
+                    case 'texture':
                         {
                             const shadow = Math.min(1 / Vec2.dist(player.pos, t) * 2, 1);
-                            const sx = Math.floor((t.x - Math.floor(t.x)) * ceiling.image.width);
-                            const sy = Math.floor((t.y - Math.floor(t.y)) * ceiling.image.height);
+                            const sx = Math.floor((t.x - Math.floor(t.x)) * ceiling.texture.width);
+                            const sy = Math.floor((t.y - Math.floor(t.y)) * ceiling.texture.height);
                             const destP = (sz * backImageData.width + x) * 4;
-                            const srcP = (sy * ceiling.image.width + sx) * 4;
-                            backImageData.data[destP + 0] = ceiling.image.data[srcP + 0] * shadow;
-                            backImageData.data[destP + 1] = ceiling.image.data[srcP + 1] * shadow;
-                            backImageData.data[destP + 2] = ceiling.image.data[srcP + 2] * shadow;
+                            const srcP = (sy * ceiling.texture.width + sx) * 4;
+                            backImageData.data[destP + 0] = ceiling.texture.data[srcP + 0] * shadow;
+                            backImageData.data[destP + 1] = ceiling.texture.data[srcP + 1] * shadow;
+                            backImageData.data[destP + 2] = ceiling.texture.data[srcP + 2] * shadow;
                         }
                         break;
                     default: Tile.throwBad(ceiling);
@@ -443,7 +443,7 @@ const renderWalls = ({ display: { backImageData, zBuffer }, scene, player }) => 
                         }
                     }
                     break;
-                case 'image':
+                case 'texture':
                     {
                         const t = Vec2.sub(Vec2.clone(p), c);
                         let u = 0;
@@ -463,16 +463,16 @@ const renderWalls = ({ display: { backImageData, zBuffer }, scene, player }) => 
                         const y2 = Math.floor(y1 + stripeHeight);
                         const by1 = Math.max(0, y1);
                         const by2 = Math.min(backImageData.height - 1, y2);
-                        const tx = Math.floor(u * wall.image.width);
-                        const sh = (1 / Math.ceil(stripeHeight)) * wall.image.height;
+                        const tx = Math.floor(u * wall.texture.width);
+                        const sh = (1 / Math.ceil(stripeHeight)) * wall.texture.height;
                         const shadow = Math.min(1 / zBuffer[x] * 2, 1);
                         for (let y = by1; y <= by2; ++y) {
                             const ty = Math.floor((y - y1) * sh);
                             const destP = (y * backImageData.width + x) * 4;
-                            const srcP = (ty * wall.image.width + tx) * 4;
-                            backImageData.data[destP + 0] = wall.image.data[srcP + 0] * shadow;
-                            backImageData.data[destP + 1] = wall.image.data[srcP + 1] * shadow;
-                            backImageData.data[destP + 2] = wall.image.data[srcP + 2] * shadow;
+                            const srcP = (ty * wall.texture.width + tx) * 4;
+                            backImageData.data[destP + 0] = wall.texture.data[srcP + 0] * shadow;
+                            backImageData.data[destP + 1] = wall.texture.data[srcP + 1] * shadow;
+                            backImageData.data[destP + 2] = wall.texture.data[srcP + 2] * shadow;
                         }
                     }
                     break;
