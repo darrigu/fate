@@ -43,55 +43,64 @@ const loadImageData = async (url) => {
     ctx.drawImage(image, 0, 0);
     return ctx.getImageData(0, 0, image.width, image.height);
 };
-const [brickWall, plankFloor, waterFloor, stoneCeiling] = await Promise.all([
+const [brickWall, plankFloor, waterFloor, stoneCeiling, keySprite,] = await Promise.all([
     loadImageData('./assets/images/brick_wall.png'),
     loadImageData('./assets/images/plank_floor.png'),
     loadImageData('./assets/images/water_floor.png'),
     loadImageData('./assets/images/stone_ceiling.png'),
+    loadImageData('./assets/images/key_sprite.png'),
 ]);
-const scene = Scene.create([
-    [Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.empty, Tile.image(brickWall)],
-    [Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall), Tile.image(brickWall)],
-], [
-    [Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(waterFloor), Tile.image(plankFloor)],
-    [Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor), Tile.image(plankFloor)],
-], [
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-    [Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling), Tile.image(stoneCeiling)],
-]);
+let scene;
+{
+    const _ = Tile.empty;
+    const B = Tile.image(brickWall);
+    const P = Tile.image(plankFloor);
+    const W = Tile.image(waterFloor);
+    const S = Tile.image(stoneCeiling);
+    scene = Scene.create([
+        [B, B, B, B, B, B, B, B, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, B, B, _, _, _, B, B, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, _, _, B, B, B, _, _, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, _, _, _, _, _, _, _, B],
+        [B, B, B, B, B, B, B, B, B],
+    ], [
+        [P, P, P, P, P, P, P, P, P],
+        [P, P, P, P, P, P, P, P, P],
+        [P, P, P, P, P, P, P, P, P],
+        [P, P, P, P, P, P, P, P, P],
+        [P, P, P, P, P, P, P, P, P],
+        [P, P, P, P, P, P, P, P, P],
+        [P, P, P, P, P, P, P, P, P],
+        [P, W, W, W, W, W, W, W, P],
+        [P, W, W, W, W, W, W, W, P],
+        [P, W, W, W, W, W, W, W, P],
+        [P, W, W, W, W, W, W, W, P],
+        [P, W, W, W, W, W, W, W, P],
+        [P, P, P, P, P, P, P, P, P],
+    ], [
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+        [S, S, S, S, S, S, S, S, S],
+    ]);
+}
 const player = Player.create(Vec2.create(scene.width * 0.63, scene.height * 0.63), Math.PI * 1.25);
 const keys = {};
 let fps = 0;
