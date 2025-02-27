@@ -80,15 +80,10 @@ let scene;
         [S, S, S, S, S, S, S, S, S],
         [S, S, S, S, S, S, S, S, S],
         [S, S, S, S, S, S, S, S, S],
-    ], [
-        {
-            pos: Vec2.create(4.5, 3.5),
-            z: 0.75,
-            scale: 0.5,
-            texture: await loadTexture('./assets/images/key_sprite.png'),
-        },
     ]);
 }
+Scene.pushSprite(scene, await loadTexture('./assets/images/key_sprite.png'), Vec2.create(4.5, 3.5), 0.75, 0.4);
+Scene.pushSprite(scene, await loadTexture('./assets/images/key_sprite.png'), Vec2.create(5.5, 4.5), 0.75, 0.4);
 const player = Player.create(Vec2.create(scene.width * 0.63, scene.height * 0.63), Math.PI * 1.25);
 const keys = {};
 let fps = 0;

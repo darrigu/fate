@@ -3,8 +3,13 @@ const NEAR_CLIPPING_PLANE = 0.1;
 const FAR_CLIPPING_PLANE = 10;
 const FOV = Math.PI/2;
 const COS_HALF_FOV = Math.cos(FOV/2);
+const PLAYER_RADIUS = 0.5;
+
+const ITEM_FREQ = 1;
+const ITEM_AMP = 0.03;
+
 const MINIMAP_ENABLED = false;
-const MINIMAP_RENDER_SPRITES = true;
+const MINIMAP_SPRITES = true;
 const MINIMAP_SCALE = 0.03;
 const MINIMAP_PLAYER_SIZE = 0.5;
 const MINIMAP_SPRITE_SIZE = 0.3;
@@ -164,6 +169,20 @@ export namespace Vec2 {
    };
 };
 
+export interface Vec3 {
+   x: number;
+   y: number;
+   z: number;
+}
+
+export namespace Vec3 {
+   export const create = (x = 0, y = x, z = y): Vec3 => ({ x, y, z });
+
+   export const isVec3 = (object: any): object is Vec3 => {
+      return typeof object === 'object' && 'x' in object && 'y' in object && 'z' in object;
+   };
+}
+
 export interface RGBA {
    r: number;
    g: number;
@@ -239,28 +258,37 @@ export namespace Tile {
 }
 
 export interface Sprite {
+   texture: Texture;
    pos: Vec2;
    z: number;
    scale: number;
-   texture: Texture;
+   pDist: number;
+   t: number;
+}
+
+export interface Pool<T> {
+   items: T[];
+   count: number;
 }
 
 export interface Scene {
    walls: Tile[];
    floors: Tile[];
    ceilings: Tile[];
-   sprites: Sprite[];
+   spritePool: Pool<Sprite>;
+   visibleSprites: Sprite[];
    width: number;
    height: number;
 }
 
 export namespace Scene {
-   export const create = (walls: Tile[][], floors: Tile[][], ceilings: Tile[][], sprites: Sprite[]): Scene => {
+   export const create = (walls: Tile[][], floors: Tile[][], ceilings: Tile[][]): Scene => {
       return {
          walls: walls.flat(),
          floors: floors.flat(),
          ceilings: ceilings.flat(),
-         sprites,
+         spritePool: { items: [], count: 0 },
+         visibleSprites: [],
          width: walls[0].length,
          height: walls.length,
       };
@@ -321,6 +349,25 @@ export namespace Scene {
          }
       }
       return true;
+   };
+
+   export const pushSprite = ({ spritePool }: Scene, texture: Texture, pos: Vec2, z: number, scale: number) => {
+      if (spritePool.items.length <= spritePool.count) {
+         spritePool.items.push({
+            texture,
+            pos,
+            z,
+            scale,
+            pDist: 0,
+            t: 0,
+         });
+      } else {
+         spritePool.items[spritePool.count].texture = texture;
+         spritePool.items[spritePool.count].pos = pos;
+         spritePool.items[spritePool.count].z = z;
+         spritePool.items[spritePool.count].scale = scale;
+      }
+      spritePool.count++;
    };
 }
 
@@ -578,21 +625,33 @@ const renderSprites = ({ display: { backImageData, zBuffer }, scene, player }: G
    const d = Vec2.fromAngle(player.dir);
    const [p1, p2] = Player.fovRange(player);
    const fov = Vec2.sub(Vec2.clone(p2), p1);
-   for (const sprite of scene.sprites) {
+
+   scene.visibleSprites.length = 0;
+   for (let i = 0; i < scene.spritePool.count; i++) {
+      const sprite = scene.spritePool.items[i];
+
       Vec2.sub(Vec2.copy(sp, sprite.pos), player.pos);
       const spl = Vec2.len(sp);
       if (spl <= NEAR_CLIPPING_PLANE || spl >= FAR_CLIPPING_PLANE) continue;
+
       const cos = Vec2.dot(sp, d)/spl;
       if (cos < 0) continue;
       const dist = NEAR_CLIPPING_PLANE/cos;
       Vec2.sub(Vec2.add(Vec2.mul(Vec2.norm(sp), dist), player.pos), p1);
-      const t = Vec2.len(sp)/Vec2.len(fov)*Math.sign(Vec2.dot(sp, fov));
-      const pDist = Vec2.dot(Vec2.sub(Vec2.clone(sprite.pos), player.pos), d);
-      const shadow = 1 - pDist/FAR_CLIPPING_PLANE;
+      sprite.t = Vec2.len(sp)/Vec2.len(fov)*Math.sign(Vec2.dot(sp, fov));
+      sprite.pDist = Vec2.dot(Vec2.sub(Vec2.clone(sprite.pos), player.pos), d);
 
-      const cx = Math.floor(backImageData.width*t);
+      scene.visibleSprites.push(sprite);
+   }
+
+   scene.visibleSprites.sort((a, b) => b.pDist - a.pDist);
+
+   for (let sprite of scene.visibleSprites) {
+      const shadow = 1 - sprite.pDist/FAR_CLIPPING_PLANE;
+
+      const cx = Math.floor(backImageData.width*sprite.t);
       const cy = Math.floor(backImageData.height/2);
-      const maxSpriteSize = backImageData.height/pDist;
+      const maxSpriteSize = backImageData.height/sprite.pDist;
       const spriteSize = maxSpriteSize*sprite.scale;
       const x1 = Math.floor(cx - spriteSize/2);
       const x2 = Math.floor(x1 + spriteSize - 1);
@@ -604,7 +663,7 @@ const renderSprites = ({ display: { backImageData, zBuffer }, scene, player }: G
       const by2 = Math.min(backImageData.height-1, y2);
 
       for (let x = bx1; x < bx2; x++) {
-         if (pDist < zBuffer[x]) {
+         if (sprite.pDist < zBuffer[x]) {
             for (let y = by1; y < by2; y++) {
                const tx = Math.floor((x - x1)/spriteSize*sprite.texture.width);
                const ty = Math.floor((y - y1)/spriteSize*sprite.texture.height);
@@ -655,13 +714,14 @@ const renderMinimap = ({ display: { ctx }, scene, player }: Game) => {
    ctx.strokeLine(player.pos.x, player.pos.y, p2.x, p2.y);
    ctx.strokeLine(p1.x, p1.y, p2.x, p2.y);
 
-   if (MINIMAP_RENDER_SPRITES) {
+   if (MINIMAP_SPRITES) {
       ctx.fillStyle = '#9d0006';
       ctx.strokeStyle = '#b57614';
       const sp = Vec2.create();
       const d = Vec2.fromAngle(player.dir);
       ctx.strokeLine(player.pos.x, player.pos.y, ...Vec2.array(Vec2.add(Vec2.clone(player.pos), d)));
-      for (const sprite of scene.sprites) {
+      for (let i = 0; i < scene.spritePool.count; i++) {
+         const sprite = scene.spritePool.items[i];
          ctx.fillRect(sprite.pos.x - MINIMAP_SPRITE_SIZE/2, sprite.pos.y - MINIMAP_SPRITE_SIZE/2, MINIMAP_SPRITE_SIZE, MINIMAP_SPRITE_SIZE);
          Vec2.sub(Vec2.copy(sp, sprite.pos), player.pos);
          ctx.strokeLine(player.pos.x, player.pos.y, ...Vec2.array(Vec2.add(Vec2.clone(player.pos), sp)));
