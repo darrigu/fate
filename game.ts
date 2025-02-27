@@ -240,6 +240,8 @@ export namespace Tile {
 
 export interface Sprite {
    pos: Vec2;
+   z: number;
+   scale: number;
    texture: Texture;
 }
 
@@ -576,32 +578,42 @@ const renderSprites = ({ display: { backImageData, zBuffer }, scene, player }: G
    const sp = Vec2.create();
    const d = Vec2.fromAngle(player.dir);
    const [p1, p2] = Player.fovRange(player);
+   const fov = Vec2.sub(Vec2.clone(p2), p1);
    for (const sprite of scene.sprites) {
       Vec2.sub(Vec2.copy(sp, sprite.pos), player.pos);
       const spl = Vec2.len(sp);
-      if (spl === 0) continue;
-      const dot = Vec2.dot(sp, d)/spl;
-      if (!(COS_HALF_FOV <= dot && dot <= 1)) continue;
-      const dist = NEAR_CLIPPING_PLANE/dot;
-      Vec2.add(Vec2.mul(Vec2.norm(sp), dist), player.pos);
-      const t = Vec2.dist(p1, sp)/Vec2.dist(p1, p2);
+      if (spl <= NEAR_CLIPPING_PLANE || spl >= FAR_CLIPPING_PLANE) continue;
+      const cos = Vec2.dot(sp, d)/spl;
+      if (cos < 0) continue;
+      const dist = NEAR_CLIPPING_PLANE/cos;
+      Vec2.sub(Vec2.add(Vec2.mul(Vec2.norm(sp), dist), player.pos), p1);
+      const t = Vec2.len(sp)/Vec2.len(fov)*Math.sign(Vec2.dot(sp, fov));
+      const pDist = Vec2.dot(Vec2.sub(Vec2.clone(sprite.pos), player.pos), d);
+
       const cx = Math.floor(backImageData.width*t);
       const cy = Math.floor(backImageData.height/2);
+      const maxSpriteSize = backImageData.height/pDist;
+      const spriteSize = maxSpriteSize*sprite.scale;
+      const x1 = Math.floor(cx - spriteSize/2);
+      const x2 = Math.floor(x1 + spriteSize - 1);
+      const bx1 = Math.max(0, x1);
+      const bx2 = Math.min(backImageData.width - 1, x2);
+      const y1 = Math.floor(cy + maxSpriteSize/2 - maxSpriteSize*sprite.z);
+      const y2 = Math.floor(y1 + spriteSize - 1);
+      const by1 = Math.max(0, y1);
+      const by2 = Math.min(backImageData.height-1, y2);
 
-      const pDist = Vec2.dot(Vec2.sub(Vec2.clone(sprite.pos), player.pos), d);
-      const spriteSize = Math.floor(backImageData.height/pDist/2);
-      const x1 = Math.clamp(Math.floor(cx - spriteSize/2), 0, backImageData.width - 1);
-      const x2 = Math.clamp(Math.floor(cx + spriteSize/2), 0, backImageData.width - 1);
-      const y1 = Math.clamp(Math.floor(cy - spriteSize/2), 0, backImageData.height - 1);
-      const y2 = Math.clamp(Math.floor(cy + spriteSize/2), 0, backImageData.height - 1);
-
-      for (let x = x1; x <= x2; x++) {
+      for (let x = bx1; x < bx2; x++) {
          if (pDist < zBuffer[x]) {
-            for (let y = y1; y <= y2; y++) {
+            for (let y = by1; y < by2; y++) {
+               const tx = Math.floor((x - x1)/spriteSize*sprite.texture.width);
+               const ty = Math.floor((y - y1)/spriteSize*sprite.texture.height);
                const destP = (y*backImageData.width + x)*4;
-               backImageData.data[destP + 0] = 255;
-               backImageData.data[destP + 1] = 0;
-               backImageData.data[destP + 2] = 0;
+               const srcP = (ty*sprite.texture.width + tx)*4;
+               const alpha = sprite.texture.data[srcP + 3]/255;
+               backImageData.data[destP + 0] = backImageData.data[destP + 0]*(1 - alpha) + sprite.texture.data[srcP + 0]*alpha;
+               backImageData.data[destP + 1] = backImageData.data[destP + 1]*(1 - alpha) + sprite.texture.data[srcP + 1]*alpha;
+               backImageData.data[destP + 2] = backImageData.data[destP + 2]*(1 - alpha) + sprite.texture.data[srcP + 2]*alpha;
             }
          }
       }

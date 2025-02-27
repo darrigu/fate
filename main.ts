@@ -93,6 +93,8 @@ let scene: Scene;
    ], [
       {
          pos: Vec2.create(4.5, 3.5),
+         z: 0.75,
+         scale: 0.5,
          texture: await loadTexture('./assets/images/key_sprite.png'),
       },
    ]);
