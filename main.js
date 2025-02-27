@@ -38,6 +38,11 @@ let scene;
     const P = Tile.texture(await loadTexture('./assets/images/plank_floor.png'));
     const W = Tile.texture(await loadTexture('./assets/images/water_floor.png'));
     const S = Tile.texture(await loadTexture('./assets/images/stone_ceiling.png'));
+    const key = {
+        alive: true,
+        texture: await loadTexture('./assets/images/key_sprite.png'),
+        pickupAudio: new Audio('./assets/sounds/key_pickup.wav'),
+    };
     scene = Scene.create([
         [B, B, B, B, B, B, B, B, B],
         [B, _, _, _, _, _, _, _, B],
@@ -80,11 +85,15 @@ let scene;
         [S, S, S, S, S, S, S, S, S],
         [S, S, S, S, S, S, S, S, S],
         [S, S, S, S, S, S, S, S, S],
+    ], [
+        { ...key, pos: Vec2.create(2.5, 3.5), },
+        { ...key, pos: Vec2.create(3.5, 3.5), },
+        { ...key, pos: Vec2.create(4.5, 3.5), },
+        { ...key, pos: Vec2.create(5.5, 3.5), },
+        { ...key, pos: Vec2.create(6.5, 3.5), },
     ]);
 }
-Scene.pushSprite(scene, await loadTexture('./assets/images/key_sprite.png'), Vec2.create(4.5, 3.5), 0.75, 0.4);
-Scene.pushSprite(scene, await loadTexture('./assets/images/key_sprite.png'), Vec2.create(5.5, 4.5), 0.75, 0.4);
-const player = Player.create(Vec2.create(scene.width * 0.63, scene.height * 0.63), Math.PI * 1.25);
+const player = Player.create(4.5, 8.5, Math.PI * 1.5);
 const keys = {};
 let fps = 0;
 let lastTime = performance.now();
@@ -95,7 +104,14 @@ const game = {
     scene,
     player,
     get fps() { return fps; },
-    keyPressed(key) { return keys[key]; },
+    get time() { return lastTime / 1000; },
+    keyPressed(key, once) {
+        const pressed = keys[key];
+        if (once) {
+            keys[key] = false;
+        }
+        return pressed;
+    },
 };
 window.addEventListener('keydown', (event) => {
     keys[event.key] = true;
@@ -105,7 +121,7 @@ window.addEventListener('keyup', (event) => {
 });
 let Game = await import('./game.js');
 const renderLoop = (currentTime) => {
-    const deltaTime = (currentTime - lastTime);
+    const deltaTime = currentTime - lastTime;
     lastTime = currentTime;
     frameCount++;
     fpsTime += deltaTime;

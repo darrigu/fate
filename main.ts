@@ -1,4 +1,4 @@
-import { Vec2, Display, Texture, Tile, Scene, Player, Game } from './game.js';
+import { Vec2, Display, Texture, Tile, Scene, Player, Game, Item } from './game.js';
 
 const SCREEN_FACTOR = 20;
 const SCREEN_WIDTH = 16*SCREEN_FACTOR;
@@ -48,6 +48,11 @@ let scene: Scene;
    const P = Tile.texture(await loadTexture('./assets/images/plank_floor.png'));
    const W = Tile.texture(await loadTexture('./assets/images/water_floor.png'));
    const S = Tile.texture(await loadTexture('./assets/images/stone_ceiling.png'));
+   const key: Partial<Item> = {
+      alive: true,
+      texture: await loadTexture('./assets/images/key_sprite.png'),
+      pickupAudio: new Audio('./assets/sounds/key_pickup.wav'),
+   };
    scene = Scene.create([
       [B, B, B, B, B, B, B, B, B],
       [B, _, _, _, _, _, _, _, B],
@@ -90,29 +95,16 @@ let scene: Scene;
       [S, S, S, S, S, S, S, S, S],
       [S, S, S, S, S, S, S, S, S],
       [S, S, S, S, S, S, S, S, S],
+   ], [
+      { ...key, pos: Vec2.create(2.5, 3.5), } as Item,
+      { ...key, pos: Vec2.create(3.5, 3.5), } as Item,
+      { ...key, pos: Vec2.create(4.5, 3.5), } as Item,
+      { ...key, pos: Vec2.create(5.5, 3.5), } as Item,
+      { ...key, pos: Vec2.create(6.5, 3.5), } as Item,
    ]);
 }
 
-Scene.pushSprite(
-   scene,
-   await loadTexture('./assets/images/key_sprite.png'),
-   Vec2.create(4.5, 3.5),
-   0.75,
-   0.4,
-);
-
-Scene.pushSprite(
-   scene,
-   await loadTexture('./assets/images/key_sprite.png'),
-   Vec2.create(5.5, 4.5),
-   0.75,
-   0.4,
-);
-
-const player = Player.create(
-   Vec2.create(scene.width*0.63, scene.height*0.63),
-   Math.PI*1.25
-);
+const player = Player.create(4.5, 8.5, Math.PI*1.5);
 
 const keys: Record<string, boolean> = {};
 let fps = 0;
@@ -126,7 +118,14 @@ const game: Game = {
    player,
 
    get fps(): number { return fps; },
-   keyPressed(key: string): boolean { return keys[key]; },
+   get time(): number { return lastTime/1000; },
+   keyPressed(key: string, once: boolean): boolean {
+      const pressed = keys[key];
+      if (once) {
+         keys[key] = false;
+      }
+      return pressed;
+   },
 };
 
 window.addEventListener('keydown', (event) => {
@@ -140,7 +139,7 @@ window.addEventListener('keyup', (event) => {
 let Game = await import('./game.js');
 
 const renderLoop = (currentTime: number) => {
-   const deltaTime = (currentTime - lastTime);
+   const deltaTime = currentTime - lastTime;
    lastTime = currentTime;
 
    frameCount++;

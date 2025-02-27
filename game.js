@@ -141,6 +141,34 @@ export var Vec3;
     Vec3.isVec3 = (object) => {
         return typeof object === 'object' && 'x' in object && 'y' in object && 'z' in object;
     };
+    Vec3.clone2 = (v) => {
+        return Vec2.create(v.x, v.y);
+    };
+    Vec3.copy2 = (a, b, z) => {
+        a.x = b.x;
+        a.y = b.y;
+        a.z = z;
+        return a;
+    };
+    Vec3.mul = (v, x, y, z) => {
+        if (Vec3.isVec3(x)) {
+            v.x *= x.x;
+            v.y *= x.y;
+            v.z *= x.z;
+        }
+        else {
+            v.x *= x;
+            v.y *= y ?? x;
+            v.z *= z ?? y ?? x;
+        }
+        return v;
+    };
+    Vec3.sqrLen = (v) => {
+        return v.x * v.x + v.y * v.y + v.z * v.z;
+    };
+    Vec3.len = (v) => {
+        return Math.sqrt(Vec3.sqrLen(v));
+    };
 })(Vec3 || (Vec3 = {}));
 export var RGBA;
 (function (RGBA) {
@@ -183,13 +211,14 @@ export var Tile;
 })(Tile || (Tile = {}));
 export var Scene;
 (function (Scene) {
-    Scene.create = (walls, floors, ceilings) => {
+    Scene.create = (walls, floors, ceilings, items) => {
         return {
             walls: walls.flat(),
             floors: floors.flat(),
             ceilings: ceilings.flat(),
             spritePool: { items: [], count: 0 },
             visibleSprites: [],
+            items,
             width: walls[0].length,
             height: walls.length,
         };
@@ -276,7 +305,7 @@ export var Scene;
 })(Scene || (Scene = {}));
 export var Player;
 (function (Player) {
-    Player.create = (pos, dir) => ({ pos, dir, velocity: Vec2.create() });
+    Player.create = (x, y, dir) => ({ pos: Vec2.create(x, y), dir, velocity: Vec2.create() });
     Player.fovRange = (player) => {
         const l = Math.tan(FOV / 2) * NEAR_CLIPPING_PLANE;
         const p = Vec2.add(Vec2.fromAngle(player.dir, NEAR_CLIPPING_PLANE), player.pos);
@@ -337,19 +366,19 @@ const rayCast = (scene, p1, p2) => {
     }
     return p2;
 };
-export const update = ({ scene, player, keyPressed }, deltaTime) => {
+export const update = ({ scene, player, time, keyPressed }, deltaTime) => {
     Vec2.copy(player.velocity, 0);
     let angularVelocity = 0;
-    if (keyPressed('ArrowUp')) {
+    if (keyPressed('ArrowUp', false)) {
         Vec2.add(player.velocity, Vec2.fromAngle(player.dir, PLAYER_SPEED));
     }
-    if (keyPressed('ArrowDown')) {
+    if (keyPressed('ArrowDown', false)) {
         Vec2.sub(player.velocity, Vec2.fromAngle(player.dir, PLAYER_SPEED));
     }
-    if (keyPressed('ArrowLeft')) {
+    if (keyPressed('ArrowLeft', false)) {
         angularVelocity -= Math.PI / 2;
     }
-    if (keyPressed('ArrowRight')) {
+    if (keyPressed('ArrowRight', false)) {
         angularVelocity += Math.PI / 2;
     }
     player.dir += angularVelocity * deltaTime;
@@ -360,6 +389,21 @@ export const update = ({ scene, player, keyPressed }, deltaTime) => {
     const ny = player.pos.y + player.velocity.y * deltaTime;
     if (Scene.rectFits(scene, player.pos.x, ny, MINIMAP_PLAYER_SIZE, MINIMAP_PLAYER_SIZE)) {
         player.pos.y = ny;
+    }
+    for (let item of scene.items) {
+        if (item.alive) {
+            if (Vec2.sqrDist(player.pos, item.pos) < PLAYER_RADIUS * PLAYER_RADIUS) {
+                item.pickupAudio.currentTime = 0;
+                item.pickupAudio.play();
+                item.alive = false;
+            }
+        }
+    }
+    scene.spritePool.count = 0;
+    for (let item of scene.items) {
+        if (item.alive) {
+            Scene.pushSprite(scene, item.texture, item.pos, 0.4 + ITEM_AMP - ITEM_AMP * Math.sin(ITEM_FREQ * Math.PI * time + item.pos.x + item.pos.y), 0.4);
+        }
     }
 };
 const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }) => {

@@ -181,6 +181,38 @@ export namespace Vec3 {
    export const isVec3 = (object: any): object is Vec3 => {
       return typeof object === 'object' && 'x' in object && 'y' in object && 'z' in object;
    };
+
+   export const clone2 = (v: Vec3): Vec2 => {
+      return Vec2.create(v.x, v.y);
+   };
+
+   export const copy2 = (a: Vec3, b: Vec2, z: number): Vec3 => {
+      a.x = b.x;
+      a.y = b.y
+      a.z = z;
+      return a;
+   };
+
+   export const mul = (v: Vec3, x: Vec3 | number, y?: number, z?: number): Vec3 => {
+      if (isVec3(x)) {
+         v.x *= x.x;
+         v.y *= x.y;
+         v.z *= x.z;
+      } else {
+         v.x *= x;
+         v.y *= y ?? x;
+         v.z *= z ?? y ?? x;
+      }
+      return v;
+   };
+
+   export const sqrLen = (v: Vec3): number => {
+      return v.x*v.x + v.y*v.y + v.z*v.z;
+   };
+
+   export const len = (v: Vec3): number => {
+      return Math.sqrt(sqrLen(v));
+   };
 }
 
 export interface RGBA {
@@ -266,6 +298,13 @@ export interface Sprite {
    t: number;
 }
 
+export interface Item {
+   alive: boolean;
+   texture: Texture;
+   pickupAudio: HTMLAudioElement;
+   pos: Vec2;
+}
+
 export interface Pool<T> {
    items: T[];
    count: number;
@@ -277,18 +316,20 @@ export interface Scene {
    ceilings: Tile[];
    spritePool: Pool<Sprite>;
    visibleSprites: Sprite[];
+   items: Item[],
    width: number;
    height: number;
 }
 
 export namespace Scene {
-   export const create = (walls: Tile[][], floors: Tile[][], ceilings: Tile[][]): Scene => {
+   export const create = (walls: Tile[][], floors: Tile[][], ceilings: Tile[][], items: Item[]): Scene => {
       return {
          walls: walls.flat(),
          floors: floors.flat(),
          ceilings: ceilings.flat(),
          spritePool: { items: [], count: 0 },
          visibleSprites: [],
+         items,
          width: walls[0].length,
          height: walls.length,
       };
@@ -378,7 +419,7 @@ export interface Player {
 }
 
 export namespace Player {
-   export const create = (pos: Vec2, dir: number) => ({ pos, dir, velocity: Vec2.create() });
+   export const create = (x: number, y: number, dir: number) => ({ pos: Vec2.create(x, y), dir, velocity: Vec2.create() });
 
    export const fovRange = (player: Player): [Vec2, Vec2] => {
       const l = Math.tan(FOV/2)*NEAR_CLIPPING_PLANE;
@@ -451,22 +492,23 @@ export interface Game {
    player: Player;
 
    get fps(): number;
-   keyPressed(key: string): boolean;
+   get time(): number;
+   keyPressed(key: string, once: boolean): boolean;
 }
 
-export const update = ({ scene, player, keyPressed }: Game, deltaTime: number) => {
+export const update = ({ scene, player, time, keyPressed }: Game, deltaTime: number) => {
    Vec2.copy(player.velocity, 0);
    let angularVelocity = 0;
-   if (keyPressed('ArrowUp')) {
+   if (keyPressed('ArrowUp', false)) {
       Vec2.add(player.velocity, Vec2.fromAngle(player.dir, PLAYER_SPEED));
    }
-   if (keyPressed('ArrowDown')) {
+   if (keyPressed('ArrowDown', false)) {
       Vec2.sub(player.velocity, Vec2.fromAngle(player.dir, PLAYER_SPEED));
    }
-   if (keyPressed('ArrowLeft')) {
+   if (keyPressed('ArrowLeft', false)) {
       angularVelocity -= Math.PI/2;
    }
-   if (keyPressed('ArrowRight')) {
+   if (keyPressed('ArrowRight', false)) {
       angularVelocity += Math.PI/2;
    }
    player.dir += angularVelocity*deltaTime;
@@ -477,6 +519,24 @@ export const update = ({ scene, player, keyPressed }: Game, deltaTime: number) =
    const ny = player.pos.y + player.velocity.y*deltaTime;
    if (Scene.rectFits(scene, player.pos.x, ny, MINIMAP_PLAYER_SIZE, MINIMAP_PLAYER_SIZE)) {
       player.pos.y = ny;
+   }
+
+   for (let item of scene.items) {
+      if (item.alive) {
+         if (Vec2.sqrDist(player.pos, item.pos) < PLAYER_RADIUS*PLAYER_RADIUS) {
+            item.pickupAudio.currentTime = 0;
+            item.pickupAudio.play();
+            item.alive = false;
+         }
+      }
+   }
+
+   scene.spritePool.count = 0;
+
+   for (let item of scene.items) {
+      if (item.alive) {
+         Scene.pushSprite(scene, item.texture, item.pos, 0.4 + ITEM_AMP - ITEM_AMP*Math.sin(ITEM_FREQ*Math.PI*time + item.pos.x + item.pos.y), 0.4);
+      }
    }
 };
 
