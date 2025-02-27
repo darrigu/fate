@@ -17,7 +17,7 @@ wss.on('connection', (ws) => {
    });
 });
 
-const FILES_TO_WATCH = ['index.html', 'main.js'];
+const FILES_TO_WATCH = ['index.html', 'main.js', 'game.js'];
 
 FILES_TO_WATCH.forEach(file => {
    watchFile(path.join(__dirname, file), { interval: 50 }, () => {
