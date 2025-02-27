@@ -487,16 +487,18 @@ const renderMinimap = ({ display: { ctx }, scene, player }) => {
     ctx.strokeLine(p1.x, p1.y, p2.x, p2.y);
     ctx.restore();
 };
+const renderFPS = ({ display: { ctx }, fps }) => {
+    ctx.fillStyle = 'white';
+    ctx.font = '32px Arial';
+    ctx.fillText(`FPS: ${fps}`, 15, 40);
+};
 export const render = (game) => {
-    const { display: { ctx } } = game;
     renderFloorAndCeiling(game);
     renderWalls(game);
     Display.swapBack(game.display);
     if (MINIMAP_ENABLED) {
         renderMinimap(game);
     }
-    ctx.fillStyle = 'white';
-    ctx.font = '32px Arial';
-    ctx.fillText(`FPS: ${game.fps}`, 15, 40);
+    renderFPS(game);
 };
 //# sourceMappingURL=game.js.map

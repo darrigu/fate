@@ -558,9 +558,13 @@ const renderMinimap = ({ display: { ctx }, scene, player }: Game) => {
    ctx.restore();
 };
 
-export const render = (game: Game) => {
-   const { display: { ctx } } = game;
+const renderFPS = ({ display: { ctx }, fps }: Game) => {
+   ctx.fillStyle = 'white';
+   ctx.font = '32px Arial';
+   ctx.fillText(`FPS: ${fps}`, 15, 40);
+};
 
+export const render = (game: Game) => {
    renderFloorAndCeiling(game);
    renderWalls(game);
    Display.swapBack(game.display);
@@ -569,7 +573,5 @@ export const render = (game: Game) => {
       renderMinimap(game);
    }
 
-   ctx.fillStyle = 'white';
-   ctx.font = '32px Arial';
-   ctx.fillText(`FPS: ${game.fps}`, 15, 40);
+   renderFPS(game);
 };
