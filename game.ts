@@ -448,6 +448,9 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }: Ga
       Vec2.add(Vec2.mul(Vec2.norm(Vec2.sub(Vec2.copy(t1, p1), player.pos)), b), player.pos);
       Vec2.add(Vec2.mul(Vec2.norm(Vec2.sub(Vec2.copy(t2, p2), player.pos)), b), player.pos);
 
+      const colorShadow = Vec2.dist(player.pos, t)*255;
+      const textureShadow = Math.min(1/Vec2.dist(player.pos, t)*2, 1);
+
       for (let x = 0; x < backImageData.width; x++) {
          Vec2.lerp(Vec2.copy(t, t1), t2, x/backImageData.width);
 
@@ -457,24 +460,22 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }: Ga
                case 'empty':
                   floor = Tile.color(RGBA.black);
                case 'color': {
-                  const shadow = Vec2.dist(player.pos, t)*255;
                   const destP = (y*backImageData.width + x)*4;
                   // @ts-ignore
-                  backImageData.data[destP + 0] = floor.color.r*shadow;
+                  backImageData.data[destP + 0] = floor.color.r*colorShadow;
                   // @ts-ignore
-                  backImageData.data[destP + 1] = floor.color.g*shadow;
+                  backImageData.data[destP + 1] = floor.color.g*colorShadow;
                   // @ts-ignore
-                  backImageData.data[destP + 2] = floor.color.b*shadow;
+                  backImageData.data[destP + 2] = floor.color.b*colorShadow;
                } break;
                case 'texture': {
-                  const shadow = Math.min(1/Vec2.dist(player.pos, t)*2, 1);
                   const sx = Math.floor((t.x - Math.floor(t.x))*floor.texture.width);
                   const sy = Math.floor((t.y - Math.floor(t.y))*floor.texture.height);
                   const destP = (y*backImageData.width + x)*4;
                   const srcP = (sy*floor.texture.width + sx)*4;
-                  backImageData.data[destP + 0] = floor.texture.data[srcP + 0]*shadow;
-                  backImageData.data[destP + 1] = floor.texture.data[srcP + 1]*shadow;
-                  backImageData.data[destP + 2] = floor.texture.data[srcP + 2]*shadow;
+                  backImageData.data[destP + 0] = floor.texture.data[srcP + 0]*textureShadow;
+                  backImageData.data[destP + 1] = floor.texture.data[srcP + 1]*textureShadow;
+                  backImageData.data[destP + 2] = floor.texture.data[srcP + 2]*textureShadow;
                } break;
                default: Tile.throwBad(floor);
             }
@@ -486,24 +487,22 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }: Ga
                case 'empty':
                   ceiling = Tile.color(RGBA.black);
                case 'color': {
-                  const shadow = Vec2.dist(player.pos, t)*255;
                   const destP = (sz*backImageData.width + x)*4;
                   // @ts-ignore
-                  backImageData.data[destP + 0] = ceiling.color.r*shadow;
+                  backImageData.data[destP + 0] = ceiling.color.r*colorShadow;
                   // @ts-ignore
-                  backImageData.data[destP + 1] = ceiling.color.g*shadow;
+                  backImageData.data[destP + 1] = ceiling.color.g*colorShadow;
                   // @ts-ignore
-                  backImageData.data[destP + 2] = ceiling.color.b*shadow;
+                  backImageData.data[destP + 2] = ceiling.color.b*colorShadow;
                } break;
                case 'texture': {
-                  const shadow = Math.min(1/Vec2.dist(player.pos, t)*2, 1);
                   const sx = Math.floor((t.x - Math.floor(t.x))*ceiling.texture.width);
                   const sy = Math.floor((t.y - Math.floor(t.y))*ceiling.texture.height);
                   const destP = (sz*backImageData.width + x)*4;
                   const srcP = (sy*ceiling.texture.width + sx)*4;
-                  backImageData.data[destP + 0] = ceiling.texture.data[srcP + 0]*shadow;
-                  backImageData.data[destP + 1] = ceiling.texture.data[srcP + 1]*shadow;
-                  backImageData.data[destP + 2] = ceiling.texture.data[srcP + 2]*shadow;
+                  backImageData.data[destP + 0] = ceiling.texture.data[srcP + 0]*textureShadow;
+                  backImageData.data[destP + 1] = ceiling.texture.data[srcP + 1]*textureShadow;
+                  backImageData.data[destP + 2] = ceiling.texture.data[srcP + 2]*textureShadow;
                } break;
                default: Tile.throwBad(ceiling);
             }
@@ -589,6 +588,7 @@ const renderSprites = ({ display: { backImageData, zBuffer }, scene, player }: G
       Vec2.sub(Vec2.add(Vec2.mul(Vec2.norm(sp), dist), player.pos), p1);
       const t = Vec2.len(sp)/Vec2.len(fov)*Math.sign(Vec2.dot(sp, fov));
       const pDist = Vec2.dot(Vec2.sub(Vec2.clone(sprite.pos), player.pos), d);
+      const shadow = 1 - pDist/FAR_CLIPPING_PLANE;
 
       const cx = Math.floor(backImageData.width*t);
       const cy = Math.floor(backImageData.height/2);
@@ -611,9 +611,9 @@ const renderSprites = ({ display: { backImageData, zBuffer }, scene, player }: G
                const destP = (y*backImageData.width + x)*4;
                const srcP = (ty*sprite.texture.width + tx)*4;
                const alpha = sprite.texture.data[srcP + 3]/255;
-               backImageData.data[destP + 0] = backImageData.data[destP + 0]*(1 - alpha) + sprite.texture.data[srcP + 0]*alpha;
-               backImageData.data[destP + 1] = backImageData.data[destP + 1]*(1 - alpha) + sprite.texture.data[srcP + 1]*alpha;
-               backImageData.data[destP + 2] = backImageData.data[destP + 2]*(1 - alpha) + sprite.texture.data[srcP + 2]*alpha;
+               backImageData.data[destP + 0] = backImageData.data[destP + 0]*(1 - alpha) + sprite.texture.data[srcP + 0]*shadow*alpha;
+               backImageData.data[destP + 1] = backImageData.data[destP + 1]*(1 - alpha) + sprite.texture.data[srcP + 1]*shadow*alpha;
+               backImageData.data[destP + 2] = backImageData.data[destP + 2]*(1 - alpha) + sprite.texture.data[srcP + 2]*shadow*alpha;
             }
          }
       }
