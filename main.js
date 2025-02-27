@@ -3,12 +3,9 @@ const SCREEN_FACTOR = 20;
 const SCREEN_WIDTH = 16 * SCREEN_FACTOR;
 const SCREEN_HEIGHT = 9 * SCREEN_FACTOR;
 const canvas = document.querySelector('canvas');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-});
+const factor = 80;
+canvas.width = 16 * factor;
+canvas.height = 9 * factor;
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 const backImageData = new ImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
