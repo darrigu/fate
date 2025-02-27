@@ -1,6 +1,6 @@
 import { Vec2, Display, Tile, Scene, Player, Game } from './game.js';
 
-const SCREEN_FACTOR = 30;
+const SCREEN_FACTOR = 20;
 const SCREEN_WIDTH = 16*SCREEN_FACTOR;
 const SCREEN_HEIGHT = 9*SCREEN_FACTOR;
 
@@ -22,27 +22,7 @@ const backCanvas = new OffscreenCanvas(SCREEN_WIDTH, SCREEN_HEIGHT);
 const backCtx = backCanvas.getContext('2d')!;
 backCtx.imageSmoothingEnabled = false;
 
-declare global {
-   interface CanvasRenderingContext2D {
-      strokeLine(x1: number, y1: number, x2: number, y2: number): void;
-      fillCircle(x: number, y: number, radius: number): void;
-   }
-}
-
-CanvasRenderingContext2D.prototype.strokeLine = function(x1: number, y1: number, x2: number, y2: number) {
-   this.beginPath();
-   this.moveTo(x1, y1);
-   this.lineTo(x2, y2);
-   this.stroke();
-};
-
-CanvasRenderingContext2D.prototype.fillCircle = function(x: number, y: number, radius: number) {
-   this.beginPath();
-   this.arc(x, y, radius, 0, 2*Math.PI);
-   this.fill();
-};
-
-const display: Display = { ctx, backCtx, backImageData };
+const display = Display.create(ctx, backCtx, backImageData);
 
 const loadImage = async (url: string): Promise<HTMLImageElement> => {
    const image = new Image();
@@ -124,6 +104,11 @@ let scene: Scene;
       [S, S, S, S, S, S, S, S, S],
       [S, S, S, S, S, S, S, S, S],
       [S, S, S, S, S, S, S, S, S],
+   ], [
+      {
+         pos: Vec2.create(4.5, 3.5),
+         image: keySprite,
+      },
    ]);
 }
 
@@ -183,7 +168,9 @@ if (isDev) {
    const ws = new WebSocket('ws://localhost:5000');
 
    ws.addEventListener('message', async (event) => {
-      if (event.data === 'reload') {
+      if (event.data === 'cold') {
+         window.location.reload();
+      } else if (event.data === 'hot') {
          console.log('Hot reloading module');
          Game = await import('./game.js?date=' + performance.now());
       }

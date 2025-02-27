@@ -2,10 +2,43 @@ const EPS = 1e-6;
 const NEAR_CLIPPING_PLANE = 0.1;
 const FAR_CLIPPING_PLANE = 10;
 const FOV = Math.PI/2;
+const COS_HALF_FOV = Math.cos(FOV/2);
 const MINIMAP_ENABLED = false;
+const MINIMAP_RENDER_SPRITES = true;
 const MINIMAP_SCALE = 0.03;
 const MINIMAP_PLAYER_SIZE = 0.5;
+const MINIMAP_SPRITE_SIZE = 0.3;
 const PLAYER_SPEED = 2;
+
+declare global {
+   interface Math {
+      clamp(x: number, min: number, max: number): number;
+   }
+}
+
+Math.clamp = (x: number, min: number, max: number): number => {
+   return Math.max(min, Math.min(max, x));
+};
+
+declare global {
+   interface CanvasRenderingContext2D {
+      strokeLine(x1: number, y1: number, x2: number, y2: number): void;
+      fillCircle(x: number, y: number, radius: number): void;
+   }
+}
+
+CanvasRenderingContext2D.prototype.strokeLine = function(x1: number, y1: number, x2: number, y2: number) {
+   this.beginPath();
+   this.moveTo(x1, y1);
+   this.lineTo(x2, y2);
+   this.stroke();
+};
+
+CanvasRenderingContext2D.prototype.fillCircle = function(x: number, y: number, radius: number) {
+   this.beginPath();
+   this.arc(x, y, radius, 0, 2*Math.PI);
+   this.fill();
+};
 
 export interface Vec2 {
    x: number;
@@ -18,6 +51,8 @@ export namespace Vec2 {
    export const isVec2 = (object: any): object is Vec2 => {
       return typeof object === 'object' && 'x' in object && 'y' in object;
    };
+
+   export const array = (v: Vec2): [number, number] => [v.x, v.y];
 
    export const fromAngle = (angle: number, len = 1): Vec2 => {
       return Vec2.create(Math.cos(angle)*len, Math.sin(angle)*len);
@@ -157,10 +192,18 @@ export interface Display {
    ctx: CanvasRenderingContext2D,
    backCtx: OffscreenCanvasRenderingContext2D,
    backImageData: ImageData,
+   zBuffer: number[],
 }
 
 export namespace Display {
-   export const swapBack = ({ ctx, backCtx, backImageData }: Display) => {
+   export const create = (ctx: CanvasRenderingContext2D, backCtx: OffscreenCanvasRenderingContext2D, backImageData: ImageData) => ({
+      ctx,
+      backCtx,
+      backImageData,
+      zBuffer: new Array(backImageData.width).fill(0),
+   });
+
+   export const swapBuffers = ({ ctx, backCtx, backImageData }: Display) => {
       backCtx.putImageData(backImageData, 0, 0);
       ctx.drawImage(backCtx.canvas, 0, 0, ctx.canvas.width, ctx.canvas.height);
    };
@@ -193,20 +236,27 @@ export namespace Tile {
    };
 }
 
+export interface Sprite {
+   pos: Vec2;
+   image: ImageData;
+}
+
 export interface Scene {
    walls: Tile[];
    floors: Tile[];
    ceilings: Tile[];
+   sprites: Sprite[];
    width: number;
    height: number;
 }
 
 export namespace Scene {
-   export const create = (walls: Tile[][], floors: Tile[][], ceilings: Tile[][]): Scene => {
+   export const create = (walls: Tile[][], floors: Tile[][], ceilings: Tile[][], sprites: Sprite[]): Scene => {
       return {
          walls: walls.flat(),
          floors: floors.flat(),
          ceilings: ceilings.flat(),
+         sprites,
          width: walls[0].length,
          height: walls.length,
       };
@@ -458,7 +508,7 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }: Ga
    }
 };
 
-const renderWalls = ({ display: { backImageData }, scene, player }: Game) => {
+const renderWalls = ({ display: { backImageData, zBuffer }, scene, player }: Game) => {
    const [p1, p2] = Player.fovRange(player);
    const d = Vec2.fromAngle(player.dir);
    for (let x = 0; x < backImageData.width; x++) {
@@ -467,13 +517,13 @@ const renderWalls = ({ display: { backImageData }, scene, player }: Game) => {
       let wall = Scene.getWall(scene, c);
       if (wall !== null) {
          const v = Vec2.sub(Vec2.clone(p), player.pos);
-         const dot = Vec2.dot(v, d);
-         const stripeHeight = backImageData.height/dot;
+         zBuffer[x] = Vec2.dot(v, d);
+         const stripeHeight = backImageData.height/zBuffer[x];
          switch (wall.kind) {
             case 'empty':
                wall = Tile.color(RGBA.black);
             case 'color': {
-               const shadow = 1/dot*2;
+               const shadow = 1/zBuffer[x]*2;
                for (let dy = 0; dy < Math.ceil(stripeHeight); ++dy) {
                   const y = Math.floor((backImageData.height - stripeHeight)*0.5) + dy;
                   const destP = (y*backImageData.width + x)*4;
@@ -504,7 +554,7 @@ const renderWalls = ({ display: { backImageData }, scene, player }: Game) => {
                const by2 = Math.min(backImageData.height - 1, y2);
                const tx = Math.floor(u*wall.image.width);
                const sh = (1/Math.ceil(stripeHeight))*wall.image.height;
-               const shadow = Math.min(1/dot*2, 1);
+               const shadow = Math.min(1/zBuffer[x]*2, 1);
                for (let y = by1; y <= by2; ++y) {
                   const ty = Math.floor((y - y1)*sh);
                   const destP = (y*backImageData.width + x)*4;
@@ -515,6 +565,42 @@ const renderWalls = ({ display: { backImageData }, scene, player }: Game) => {
                }
             } break;
             default: Tile.throwBad(wall);
+         }
+      }
+   }
+};
+
+const renderSprites = ({ display: { backImageData, zBuffer }, scene, player }: Game) => {
+   const sp = Vec2.create();
+   const d = Vec2.fromAngle(player.dir);
+   const [p1, p2] = Player.fovRange(player);
+   for (const sprite of scene.sprites) {
+      Vec2.sub(Vec2.copy(sp, sprite.pos), player.pos);
+      const spl = Vec2.len(sp);
+      if (spl === 0) continue;
+      const dot = Vec2.dot(sp, d)/spl;
+      if (!(COS_HALF_FOV <= dot && dot <= 1)) continue;
+      const dist = NEAR_CLIPPING_PLANE/dot;
+      Vec2.add(Vec2.mul(Vec2.norm(sp), dist), player.pos);
+      const t = Vec2.dist(p1, sp)/Vec2.dist(p1, p2);
+      const cx = Math.floor(backImageData.width*t);
+      const cy = Math.floor(backImageData.height/2);
+
+      const pDist = Vec2.dot(Vec2.sub(Vec2.clone(sprite.pos), player.pos), d);
+      const spriteSize = Math.floor(backImageData.height/pDist/2);
+      const x1 = Math.clamp(Math.floor(cx - spriteSize/2), 0, backImageData.width - 1);
+      const x2 = Math.clamp(Math.floor(cx + spriteSize/2), 0, backImageData.width - 1);
+      const y1 = Math.clamp(Math.floor(cy - spriteSize/2), 0, backImageData.height - 1);
+      const y2 = Math.clamp(Math.floor(cy + spriteSize/2), 0, backImageData.height - 1);
+
+      for (let x = x1; x <= x2; x++) {
+         if (pDist < zBuffer[x]) {
+            for (let y = y1; y <= y2; y++) {
+               const destP = (y*backImageData.width + x)*4;
+               backImageData.data[destP + 0] = 255;
+               backImageData.data[destP + 1] = 0;
+               backImageData.data[destP + 2] = 0;
+            }
          }
       }
    }
@@ -555,6 +641,26 @@ const renderMinimap = ({ display: { ctx }, scene, player }: Game) => {
    ctx.strokeLine(player.pos.x, player.pos.y, p2.x, p2.y);
    ctx.strokeLine(p1.x, p1.y, p2.x, p2.y);
 
+   if (MINIMAP_RENDER_SPRITES) {
+      ctx.fillStyle = '#9d0006';
+      ctx.strokeStyle = '#b57614';
+      const sp = Vec2.create();
+      const d = Vec2.fromAngle(player.dir);
+      ctx.strokeLine(player.pos.x, player.pos.y, ...Vec2.array(Vec2.add(Vec2.clone(player.pos), d)));
+      for (const sprite of scene.sprites) {
+         ctx.fillRect(sprite.pos.x - MINIMAP_SPRITE_SIZE/2, sprite.pos.y - MINIMAP_SPRITE_SIZE/2, MINIMAP_SPRITE_SIZE, MINIMAP_SPRITE_SIZE);
+         Vec2.sub(Vec2.copy(sp, sprite.pos), player.pos);
+         ctx.strokeLine(player.pos.x, player.pos.y, ...Vec2.array(Vec2.add(Vec2.clone(player.pos), sp)));
+         const spl = Vec2.len(sp);
+         if (spl === 0) continue;
+         const dot = Vec2.dot(sp, d)/spl;
+         if (!(COS_HALF_FOV <= dot && dot <= 1)) continue;
+         const dist = NEAR_CLIPPING_PLANE/dot;
+         Vec2.add(Vec2.mul(Vec2.norm(sp), dist), player.pos);
+         ctx.fillRect(sp.x - MINIMAP_SPRITE_SIZE/2, sp.y - MINIMAP_SPRITE_SIZE/2, MINIMAP_SPRITE_SIZE, MINIMAP_SPRITE_SIZE);
+      }
+   }
+
    ctx.restore();
 };
 
@@ -567,7 +673,8 @@ const renderFPS = ({ display: { ctx }, fps }: Game) => {
 export const render = (game: Game) => {
    renderFloorAndCeiling(game);
    renderWalls(game);
-   Display.swapBack(game.display);
+   renderSprites(game);
+   Display.swapBuffers(game.display);
 
    if (MINIMAP_ENABLED) {
       renderMinimap(game);
