@@ -117,10 +117,14 @@ export var Vec2;
 export var RGBA;
 (function (RGBA) {
     RGBA.create = (r = 0, g = 0, b = 0, a = 0) => ({ r, g, b, a });
+    RGBA.black = RGBA.create(0, 0, 0, 1);
+    RGBA.white = RGBA.create(1, 1, 1, 1);
     RGBA.red = RGBA.create(1, 0, 0, 1);
     RGBA.green = RGBA.create(0, 1, 0, 1);
     RGBA.blue = RGBA.create(0, 0, 1, 1);
-    RGBA.purple = RGBA.create(1, 0, 1, 1);
+    RGBA.cyan = RGBA.create(0, 1, 1, 1);
+    RGBA.magenta = RGBA.create(1, 0, 1, 1);
+    RGBA.yellow = RGBA.create(1, 1, 0, 1);
     RGBA.toString = (color, brightness = 1) => {
         return `rgba(${Math.floor(color.r * brightness * 255)}, ${Math.floor(color.g * brightness * 255)}, ${Math.floor(color.b * brightness * 255)}, ${color.a})`;
     };
@@ -322,7 +326,7 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }) =>
             if (floor !== null) {
                 switch (floor.kind) {
                     case 'empty':
-                        floor = Tile.color(RGBA.create(0, 0, 0, 1));
+                        floor = Tile.color(RGBA.black);
                     case 'color':
                         {
                             const shadow = Vec2.dist(player.pos, t) * 255;
@@ -354,7 +358,7 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }) =>
             if (ceiling !== null) {
                 switch (ceiling.kind) {
                     case 'empty':
-                        ceiling = Tile.color(RGBA.create(0, 0, 0, 1));
+                        ceiling = Tile.color(RGBA.black);
                     case 'color':
                         {
                             const shadow = Vec2.dist(player.pos, t) * 255;
@@ -398,7 +402,7 @@ const renderWalls = ({ display: { backImageData }, scene, player }) => {
             const stripeHeight = backImageData.height / dot;
             switch (wall.kind) {
                 case 'empty':
-                    wall = Tile.color(RGBA.create(0, 0, 0, 1));
+                    wall = Tile.color(RGBA.black);
                 case 'color':
                     {
                         const shadow = 1 / dot * 2;

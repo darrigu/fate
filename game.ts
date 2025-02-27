@@ -139,10 +139,14 @@ export interface RGBA {
 export namespace RGBA {
    export const create = (r = 0, g = 0, b = 0, a = 0): RGBA => ({ r, g, b, a });
 
-   export const red    = RGBA.create(1, 0, 0, 1);
-   export const green  = RGBA.create(0, 1, 0, 1);
-   export const blue   = RGBA.create(0, 0, 1, 1);
-   export const purple = RGBA.create(1, 0, 1, 1);
+   export const black   = RGBA.create(0, 0, 0, 1);
+   export const white   = RGBA.create(1, 1, 1, 1);
+   export const red     = RGBA.create(1, 0, 0, 1);
+   export const green   = RGBA.create(0, 1, 0, 1);
+   export const blue    = RGBA.create(0, 0, 1, 1);
+   export const cyan    = RGBA.create(0, 1, 1, 1);
+   export const magenta = RGBA.create(1, 0, 1, 1);
+   export const yellow  = RGBA.create(1, 1, 0, 1);
 
    export const toString = (color: RGBA, brightness = 1): string => {
       return `rgba(${Math.floor(color.r*brightness*255)}, ${Math.floor(color.g*brightness*255)}, ${Math.floor(color.b*brightness*255)}, ${color.a})`
@@ -397,7 +401,7 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }: Ga
          if (floor !== null) {
             switch (floor.kind) {
                case 'empty':
-                  floor = Tile.color(RGBA.create(0, 0, 0, 1));
+                  floor = Tile.color(RGBA.black);
                case 'color': {
                   const shadow = Vec2.dist(player.pos, t)*255;
                   const destP = (y*backImageData.width + x)*4;
@@ -426,7 +430,7 @@ const renderFloorAndCeiling = ({ display: { backImageData }, scene, player }: Ga
          if (ceiling !== null) {
             switch (ceiling.kind) {
                case 'empty':
-                  ceiling = Tile.color(RGBA.create(0, 0, 0, 1));
+                  ceiling = Tile.color(RGBA.black);
                case 'color': {
                   const shadow = Vec2.dist(player.pos, t)*255;
                   const destP = (sz*backImageData.width + x)*4;
@@ -467,7 +471,7 @@ const renderWalls = ({ display: { backImageData }, scene, player }: Game) => {
          const stripeHeight = backImageData.height/dot;
          switch (wall.kind) {
             case 'empty':
-               wall = Tile.color(RGBA.create(0, 0, 0, 1));
+               wall = Tile.color(RGBA.black);
             case 'color': {
                const shadow = 1/dot*2;
                for (let dy = 0; dy < Math.ceil(stripeHeight); ++dy) {
